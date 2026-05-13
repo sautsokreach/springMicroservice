@@ -15,6 +15,39 @@ spring:
       ddl-auto: create-drop
     show-sql: false
     database-platform: org.hibernate.dialect.H2Dialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/microservice-realm
+          jwk-set-uri: http://localhost:8180/realms/microservice-realm/protocol/openid-connect/certs
+  kafka:
+    bootstrap-servers: localhost:9092
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    stream:
+      binders:
+        kafka:
+          type: kafka
+        rabbit:
+          type: rabbit
+      bindings:
+        processInventoryUpdate-in-0:
+          destination: product.inventory
+          group: order-service
+          binder: kafka
+        orderEvents-out-0:
+          destination: order.events
+          binder: kafka
+        orderNotifications-out-0:
+          destination: order.notifications
+          binder: rabbit
+      function:
+        definition: processInventoryUpdate
 
 server:
   port: 8082

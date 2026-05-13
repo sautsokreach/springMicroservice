@@ -18,6 +18,12 @@ spring:
           uri: lb://product-service
           predicates:
             - Path=/api/v1/products/**
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/microservice-realm
+          jwk-set-uri: http://localhost:8180/realms/microservice-realm/protocol/openid-connect/certs
 
 server:
   port: 8080
@@ -48,3 +54,4 @@ logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG

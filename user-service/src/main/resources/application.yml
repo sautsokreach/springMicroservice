@@ -15,6 +15,32 @@ spring:
       ddl-auto: create-drop
     show-sql: false
     database-platform: org.hibernate.dialect.H2Dialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/microservice-realm
+          jwk-set-uri: http://localhost:8180/realms/microservice-realm/protocol/openid-connect/certs
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    stream:
+      binders:
+        rabbit:
+          type: rabbit
+      bindings:
+        handleOrderNotification-in-0:
+          destination: order.notifications
+          group: user-service
+          binder: rabbit
+        userEvents-out-0:
+          destination: user.events
+          binder: rabbit
+      function:
+        definition: handleOrderNotification
 
 server:
   port: 8081

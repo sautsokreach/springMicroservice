@@ -6,10 +6,26 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/microservice-realm
+          jwk-set-uri: http://keycloak:8180/realms/microservice-realm/protocol/openid-connect/certs
+  kafka:
+    bootstrap-servers: kafka:9092
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
 
 service:
   user-url: http://user-service:8080/api/v1
   product-url: http://product-service:8080/api/v1
+
+management:
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
 
 logging:
   level:

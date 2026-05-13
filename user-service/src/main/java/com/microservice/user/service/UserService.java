@@ -1,8 +1,10 @@
 package com.microservice.user.service;
 
+import com.microservice.user.messaging.UserEventPublisher;
 import com.microservice.user.model.User;
 import com.microservice.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -10,13 +12,17 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserEventPublisher userEventPublisher;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserEventPublisher userEventPublisher) {
         this.userRepository = userRepository;
+        this.userEventPublisher = userEventPublisher;
     }
 
     public User createUser(User user) {
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        userEventPublisher.publishUserRegistered(saved);
+        return saved;
     }
 
     public Optional<User> getUserById(Long id) {
@@ -33,17 +39,20 @@ public class UserService {
 
     public User updateUser(Long id, User user) {
         return userRepository.findById(id)
-                .map(existingUser -> {
-                    existingUser.setEmail(user.getEmail());
-                    existingUser.setFirstName(user.getFirstName());
-                    existingUser.setLastName(user.getLastName());
-                    existingUser.setPassword(user.getPassword());
-                    return userRepository.save(existingUser);
-                })
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            .map(existing -> {
+                existing.setEmail(user.getEmail());
+                existing.setFirstName(user.getFirstName());
+                existing.setLastName(user.getLastName());
+                existing.setPassword(user.getPassword());
+                User saved = userRepository.save(existing);
+                userEventPublisher.publishUserUpdated(saved);
+                return saved;
+            })
+            .orElseThrow(() -> new RuntimeException("User not found: " + id));
     }
 
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
+        userEventPublisher.publishUserDeleted(id);
     }
 }

@@ -15,6 +15,29 @@ spring:
       ddl-auto: create-drop
     show-sql: false
     database-platform: org.hibernate.dialect.H2Dialect
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/microservice-realm
+          jwk-set-uri: http://localhost:8180/realms/microservice-realm/protocol/openid-connect/certs
+  kafka:
+    bootstrap-servers: localhost:9092
+  cloud:
+    stream:
+      binders:
+        kafka:
+          type: kafka
+      bindings:
+        processOrderEvent-in-0:
+          destination: order.events
+          group: product-service
+          binder: kafka
+        inventoryUpdates-out-0:
+          destination: product.inventory
+          binder: kafka
+      function:
+        definition: processOrderEvent
 
 server:
   port: 8083

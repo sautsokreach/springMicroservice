@@ -5,638 +5,1306 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spring Microservice Architecture</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Segoe UI',sans-serif; background:#0f1117; color:#e2e8f0; padding:32px; }
-  h1 { text-align:center; font-size:1.8rem; color:#63b3ed; margin-bottom:8px; letter-spacing:1px; }
-  .subtitle { text-align:center; color:#718096; margin-bottom:40px; font-size:0.85rem; letter-spacing:1px; }
-  .card { background:#1a1d27; border:1px solid #2d3748; border-radius:12px; padding:24px; margin-bottom:28px; }
-  .section-title { font-size:1rem; font-weight:600; color:#90cdf4; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
-  .section-title::before { content:''; display:inline-block; width:4px; height:18px; background:#63b3ed; border-radius:2px; }
-  code { background:#2d3748; border-radius:4px; padding:1px 6px; font-size:0.76rem; color:#fbb6ce; font-family:'Cascadia Code','Consolas',monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0a0d14;color:#e2e8f0;padding:28px 20px}
+h1{text-align:center;font-size:1.9rem;color:#63b3ed;margin-bottom:6px;letter-spacing:1px}
+.subtitle{text-align:center;color:#718096;margin-bottom:32px;font-size:0.82rem;letter-spacing:1.5px}
 
-  /* ── arrows ── */
-  .arr { display:flex; flex-direction:column; align-items:center; margin:3px 0; }
-  .arr .l { width:2px; height:28px; }
-  .arr .h { width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; }
-  .arr.blue  .l { background:#63b3ed; } .arr.blue  .h { border-top:10px solid #63b3ed; }
-  .arr.green .l { background:#48bb78; } .arr.green .h { border-top:10px solid #48bb78; }
-  .arr.orange .l { background:#dd6b20; } .arr.orange .h { border-top:10px solid #dd6b20; }
-  .arr.red    .l { background:#f56565; } .arr.red    .h { border-top:10px solid #f56565; }
-  .arr.teal   .l { background:#38b2ac; } .arr.teal   .h { border-top:10px solid #38b2ac; }
-  .arr.purple .l { background:#9f7aea; } .arr.purple .h { border-top:10px solid #9f7aea; }
-  .albl { font-size:0.68rem; color:#a0aec0; text-align:center; margin:1px 0 3px; }
+/* ── tabs ── */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;justify-content:center}
+.tab{padding:7px 16px;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;border:1px solid #2d3748;background:#1a1d27;color:#a0aec0;letter-spacing:.5px;transition:all .2s}
+.tab.active{background:#2b6cb0;color:#bee3f8;border-color:#4299e1}
+.tab:hover:not(.active){background:#2d3748;color:#e2e8f0}
+.panel{display:none}.panel.active{display:block}
 
-  .bidir { display:flex; flex-direction:column; align-items:center; }
-  .bidir .bl { width:2px; height:26px; background:#9f7aea; }
-  .bidir .bt { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:9px solid #9f7aea; }
-  .bidir .bb { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:9px solid #9f7aea; }
+/* ── card ── */
+.card{background:#111520;border:1px solid #1e2535;border-radius:14px;padding:22px;margin-bottom:24px}
+.section-title{font-size:.85rem;font-weight:700;color:#90cdf4;text-transform:uppercase;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';display:inline-block;width:4px;height:16px;background:#4299e1;border-radius:2px}
+code{background:#2d3748;border-radius:4px;padding:1px 6px;font-size:.75rem;color:#fbb6ce;font-family:'Cascadia Code','Consolas',monospace}
 
-  /* ── service boxes ── */
-  .client-box { background:#2d3748; border:2px solid #63b3ed; border-radius:10px; padding:12px 40px; font-weight:700; font-size:1rem; color:#bee3f8; letter-spacing:1px; text-align:center; }
+/* ── kubernetes cluster wrapper ── */
+.k8s-cluster{border:2px dashed #4a5568;border-radius:16px;padding:18px;position:relative;margin-bottom:20px}
+.k8s-cluster-label{position:absolute;top:-11px;left:18px;background:#0a0d14;padding:0 8px;font-size:.7rem;font-weight:700;color:#718096;letter-spacing:2px;text-transform:uppercase}
+.k8s-ns{border:1.5px solid;border-radius:12px;padding:14px;margin-bottom:14px;position:relative}
+.k8s-ns-label{position:absolute;top:-10px;left:12px;background:#0a0d14;padding:0 6px;font-size:.65rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.ns-ingress  {border-color:#718096}.ns-ingress  .k8s-ns-label{color:#a0aec0}
+.ns-auth     {border-color:#9f7aea}.ns-auth     .k8s-ns-label{color:#b794f4}
+.ns-svc      {border-color:#48bb78}.ns-svc      .k8s-ns-label{color:#68d391}
+.ns-messaging{border-color:#f6ad55}.ns-messaging .k8s-ns-label{color:#fbd38d}
+.ns-monitor  {border-color:#f56565}.ns-monitor  .k8s-ns-label{color:#fc8181}
 
-  .box { border-radius:12px; padding:14px 24px; text-align:center; border:2px solid; }
-  .box .blbl { font-size:0.68rem; letter-spacing:2px; margin-bottom:3px; }
-  .box .bname { font-size:1rem; font-weight:700; margin:2px 0; }
-  .box .bport { font-size:0.78rem; opacity:0.8; }
-  .box .bsub  { font-size:0.68rem; margin-top:5px; opacity:0.75; line-height:1.5; }
+/* ── arrows ── */
+.arr{display:flex;flex-direction:column;align-items:center;margin:3px 0}
+.arr .l{width:2px;height:26px}.arr .h{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent}
+.arr.blue .l{background:#63b3ed}.arr.blue .h{border-top:9px solid #63b3ed}
+.arr.green .l{background:#48bb78}.arr.green .h{border-top:9px solid #48bb78}
+.arr.orange .l{background:#ed8936}.arr.orange .h{border-top:9px solid #ed8936}
+.arr.purple .l{background:#9f7aea}.arr.purple .h{border-top:9px solid #9f7aea}
+.arr.teal .l{background:#38b2ac}.arr.teal .h{border-top:9px solid #38b2ac}
+.arr.yellow .l{background:#ecc94b}.arr.yellow .h{border-top:9px solid #ecc94b}
+.arr.red .l{background:#f56565}.arr.red .h{border-top:9px solid #f56565}
+.arr.pink .l{background:#ed64a6}.arr.pink .h{border-top:9px solid #ed64a6}
+.albl{font-size:.65rem;color:#a0aec0;text-align:center;margin:1px 0 3px}
 
-  .bx-gateway  { background:#0f2a1a; border-color:#48bb78; min-width:300px; }
-  .bx-gateway  .blbl,.bx-gateway .bport,.bx-gateway .bsub { color:#68d391; } .bx-gateway .bname { color:#c6f6d5; }
-  .bx-eureka   { background:#2c1654; border-color:#9f7aea; min-width:240px; }
-  .bx-eureka   .blbl,.bx-eureka .bport { color:#b794f4; } .bx-eureka .bname { color:#e9d8fd; }
-  .bx-user     { background:#1a2f23; border-color:#48bb78; min-width:150px; }
-  .bx-user     .blbl,.bx-user .bport,.bx-user .bsub { color:#68d391; } .bx-user .bname { color:#c6f6d5; }
-  .bx-order    { background:#2a1f0f; border-color:#ed8936; min-width:160px; }
-  .bx-order    .blbl,.bx-order .bport,.bx-order .bsub { color:#fbd38d; } .bx-order .bname { color:#feebc8; }
-  .bx-product  { background:#0f2341; border-color:#4299e1; min-width:150px; }
-  .bx-product  .blbl,.bx-product .bport,.bx-product .bsub { color:#63b3ed; } .bx-product .bname { color:#bee3f8; }
-  .bx-prom     { background:#2d1a0a; border-color:#dd6b20; min-width:210px; }
-  .bx-prom     .blbl,.bx-prom .bport,.bx-prom .bsub { color:#f6ad55; } .bx-prom .bname { color:#fbd38d; }
-  .bx-grafana  { background:#1a0a2d; border-color:#f56565; min-width:210px; }
-  .bx-grafana  .blbl,.bx-grafana .bport { color:#fc8181; } .bx-grafana .bname { color:#fed7d7; }
-  .bx-zipkin   { background:#0a1f2d; border-color:#38b2ac; min-width:210px; }
-  .bx-zipkin   .blbl,.bx-zipkin .bport,.bx-zipkin .bsub { color:#4fd1c5; } .bx-zipkin .bname { color:#b2f5ea; }
+/* ── box styles ── */
+.box{border-radius:12px;padding:12px 20px;text-align:center;border:2px solid}
+.box .blbl{font-size:.62rem;letter-spacing:2px;margin-bottom:3px;text-transform:uppercase}
+.box .bname{font-size:.95rem;font-weight:700;margin:2px 0}
+.box .bport{font-size:.74rem;opacity:.8}
+.box .bsub{font-size:.65rem;margin-top:5px;opacity:.75;line-height:1.5}
+.badge{display:inline-block;font-size:.58rem;padding:2px 6px;border-radius:8px;font-weight:700;margin:2px 2px 0;vertical-align:middle}
 
-  .db-box { border-radius:8px; padding:6px 12px; text-align:center; font-size:0.7rem; font-weight:600; border:1px dashed; min-width:130px; }
-  .db-user    { background:#1a2f23; border-color:#48bb78; color:#68d391; }
-  .db-order   { background:#2a1f0f; border-color:#ed8936; color:#fbd38d; }
-  .db-product { background:#0f2341; border-color:#4299e1; color:#63b3ed; }
+/* color schemes */
+.bx-client  {background:#1a2335;border-color:#63b3ed;min-width:160px}
+.bx-client  .blbl,.bx-client .bport{color:#90cdf4}.bx-client .bname{color:#bee3f8}
+.bx-ingress {background:#1a1f2d;border-color:#718096;min-width:260px}
+.bx-ingress .blbl,.bx-ingress .bport{color:#a0aec0}.bx-ingress .bname{color:#e2e8f0}
+.bx-gateway {background:#0f2a1a;border-color:#48bb78;min-width:290px}
+.bx-gateway .blbl,.bx-gateway .bport,.bx-gateway .bsub{color:#68d391}.bx-gateway .bname{color:#c6f6d5}
+.bx-eureka  {background:#2c1654;border-color:#9f7aea;min-width:220px}
+.bx-eureka  .blbl,.bx-eureka .bport{color:#b794f4}.bx-eureka .bname{color:#e9d8fd}
+.bx-keycloak{background:#2a1040;border-color:#b794f4;min-width:240px}
+.bx-keycloak .blbl,.bx-keycloak .bport,.bx-keycloak .bsub{color:#d6bcfa}.bx-keycloak .bname{color:#faf5ff}
+.bx-user    {background:#1a2f23;border-color:#48bb78;min-width:145px}
+.bx-user    .blbl,.bx-user .bport,.bx-user .bsub{color:#68d391}.bx-user .bname{color:#c6f6d5}
+.bx-order   {background:#2a1f0f;border-color:#ed8936;min-width:150px}
+.bx-order   .blbl,.bx-order .bport,.bx-order .bsub{color:#fbd38d}.bx-order .bname{color:#feebc8}
+.bx-product {background:#0f2341;border-color:#4299e1;min-width:145px}
+.bx-product .blbl,.bx-product .bport,.bx-product .bsub{color:#63b3ed}.bx-product .bname{color:#bee3f8}
+.bx-rabbit  {background:#2d1015;border-color:#f56565;min-width:190px}
+.bx-rabbit  .blbl,.bx-rabbit .bport,.bx-rabbit .bsub{color:#fc8181}.bx-rabbit .bname{color:#fed7d7}
+.bx-kafka   {background:#1a1520;border-color:#b794f4;min-width:190px}
+.bx-kafka   .blbl,.bx-kafka .bport,.bx-kafka .bsub{color:#d6bcfa}.bx-kafka .bname{color:#faf5ff}
+.bx-zookeeper{background:#1a1520;border-color:#805ad5;min-width:160px}
+.bx-zookeeper .blbl,.bx-zookeeper .bport{color:#b794f4}.bx-zookeeper .bname{color:#d6bcfa}
+.bx-prom    {background:#2d1a0a;border-color:#dd6b20;min-width:180px}
+.bx-prom    .blbl,.bx-prom .bport,.bx-prom .bsub{color:#f6ad55}.bx-prom .bname{color:#fbd38d}
+.bx-grafana {background:#1a0a2d;border-color:#9f7aea;min-width:180px}
+.bx-grafana .blbl,.bx-grafana .bport{color:#b794f4}.bx-grafana .bname{color:#e9d8fd}
+.bx-zipkin  {background:#0a1f2d;border-color:#38b2ac;min-width:180px}
+.bx-zipkin  .blbl,.bx-zipkin .bport,.bx-zipkin .bsub{color:#4fd1c5}.bx-zipkin .bname{color:#b2f5ea}
 
-  .cb-badge { display:inline-block; font-size:0.62rem; padding:2px 7px; border-radius:10px; font-weight:700; margin-top:4px; background:#7b341e; color:#fbd38d; border:1px solid #ed8936; }
-  .zt-badge { display:inline-block; font-size:0.62rem; padding:2px 7px; border-radius:10px; font-weight:700; margin-top:2px; background:#0a2d2a; color:#4fd1c5; border:1px solid #38b2ac; }
+.bx-stream  {background:#162029;border-color:#38b2ac;border-style:dashed;min-width:160px}
+.bx-stream  .blbl,.bx-stream .bport,.bx-stream .bsub{color:#4fd1c5}.bx-stream .bname{color:#b2f5ea}
 
-  .svc-row { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; align-items:flex-start; }
-  .svc-col { display:flex; flex-direction:column; align-items:center; }
-  .bidir-row { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+.db-box{border-radius:8px;padding:6px 12px;text-align:center;font-size:.68rem;font-weight:700;border:1px dashed;min-width:125px}
+.db-user   {background:#1a2f23;border-color:#48bb78;color:#68d391}
+.db-order  {background:#2a1f0f;border-color:#ed8936;color:#fbd38d}
+.db-product{background:#0f2341;border-color:#4299e1;color:#63b3ed}
+.db-kc     {background:#2a1040;border-color:#9f7aea;color:#b794f4}
 
-  .legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; font-size:0.73rem; color:#718096; }
-  .legend-item { display:flex; align-items:center; gap:6px; }
-  .legend-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+/* layout helpers */
+.row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+.col{display:flex;flex-direction:column;align-items:center}
+.h-divider{width:1px;background:#2d3748;align-self:stretch;margin:0 4px}
 
-  /* ── CB state diagram ── */
-  .state-row { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
-  .state-box { border-radius:10px; padding:14px 20px; text-align:center; min-width:160px; border:2px solid; }
-  .state-closed   { background:#0f2a1a; border-color:#48bb78; }
-  .state-closed   .sn { color:#c6f6d5; } .state-closed .sd { color:#68d391; }
-  .state-open     { background:#2d1515; border-color:#f56565; }
-  .state-open     .sn { color:#fed7d7; } .state-open .sd { color:#fc8181; }
-  .state-half     { background:#2a1f0f; border-color:#ed8936; }
-  .state-half     .sn { color:#feebc8; } .state-half .sd { color:#fbd38d; }
-  .state-box .sl  { font-size:0.65rem; letter-spacing:2px; opacity:0.7; margin-bottom:4px; }
-  .state-box .sn  { font-size:0.9rem; font-weight:700; margin-bottom:4px; }
-  .state-box .sd  { font-size:0.72rem; line-height:1.5; }
-  .state-arrow { display:flex; align-items:center; gap:6px; font-size:0.72rem; color:#a0aec0; }
-  .sa { color:#718096; font-size:1.1rem; }
+/* ── badge colors ── */
+.bd-green {background:#1a4731;color:#68d391;border:1px solid #48bb78}
+.bd-blue  {background:#1a3a5c;color:#63b3ed;border:1px solid #4299e1}
+.bd-orange{background:#7b341e;color:#fbd38d;border:1px solid #ed8936}
+.bd-teal  {background:#1a4040;color:#4fd1c5;border:1px solid #38b2ac}
+.bd-purple{background:#2c1654;color:#b794f4;border:1px solid #9f7aea}
+.bd-red   {background:#742a2a;color:#fc8181;border:1px solid #f56565}
+.bd-yellow{background:#744210;color:#f6e05e;border:1px solid #ecc94b}
+.bd-pink  {background:#702459;color:#fbb6ce;border:1px solid #ed64a6}
+.bd-gray  {background:#2d3748;color:#a0aec0;border:1px solid #718096}
 
-  /* ── flow table ── */
-  .ftable { width:100%; border-collapse:collapse; font-size:0.8rem; }
-  .ftable th { background:#2d3748; padding:9px 12px; text-align:left; color:#90cdf4; font-weight:600; font-size:0.72rem; letter-spacing:1px; }
-  .ftable td { padding:9px 12px; border-bottom:1px solid #2d3748; vertical-align:top; }
-  .ftable tr:last-child td { border-bottom:none; }
-  .ftable tr:hover td { background:#1e2535; }
-  .sb { display:inline-block; border-radius:50%; width:22px; height:22px; text-align:center; line-height:22px; font-weight:700; font-size:0.72rem; }
-  .sb-blue   { background:#2b6cb0; color:#bee3f8; }
-  .sb-orange { background:#7b341e; color:#fbd38d; }
-  .sb-teal   { background:#1a4040; color:#b2f5ea; }
-  .sb-red    { background:#742a2a; color:#fed7d7; }
-  .ac { color:#63b3ed; font-weight:600; } .ag { color:#68d391; font-weight:600; }
-  .ao { color:#fbd38d; font-weight:600; } .ae { color:#b794f4; font-weight:600; }
-  .au { color:#68d391; font-weight:600; } .ap { color:#4299e1; font-weight:600; }
-  .adb{ color:#a0aec0; font-weight:600; } .apr{ color:#f6ad55; font-weight:600; }
-  .agr{ color:#fc8181; font-weight:600; } .azt{ color:#4fd1c5; font-weight:600; }
+/* ── CB state diagram ── */
+.state-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+.state-box{border-radius:10px;padding:12px 18px;text-align:center;min-width:155px;border:2px solid}
+.state-closed {background:#0f2a1a;border-color:#48bb78}.state-closed .sn{color:#c6f6d5}.state-closed .sd{color:#68d391}
+.state-open   {background:#2d1515;border-color:#f56565}.state-open .sn{color:#fed7d7}.state-open .sd{color:#fc8181}
+.state-half   {background:#2a1f0f;border-color:#ed8936}.state-half .sn{color:#feebc8}.state-half .sd{color:#fbd38d}
+.state-box .sl{font-size:.62rem;letter-spacing:2px;opacity:.7;margin-bottom:3px}
+.state-box .sn{font-size:.88rem;font-weight:700;margin-bottom:3px}
+.state-box .sd{font-size:.7rem;line-height:1.5}
+.state-arrow{display:flex;align-items:center;gap:6px;font-size:.7rem;color:#a0aec0}
 
-  /* ── file paths ── */
-  .fp-group { background:#2d3748; border-radius:10px; padding:14px; margin-bottom:14px; }
-  .fp-gtitle { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
-  .fp-row { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid #1a1d27; }
-  .fp-row:last-child { border-bottom:none; }
-  .fp-icon { width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; flex-shrink:0; }
-  .ic-java { background:#7b341e; color:#fbd38d; }
-  .ic-yml  { background:#1a4731; color:#68d391; }
-  .ic-xml  { background:#2a2f6e; color:#a3bffa; }
-  .ic-teal { background:#1a4040; color:#4fd1c5; }
-  .ic-red  { background:#742a2a; color:#fc8181; }
-  .fp-info { flex:1; }
-  .fp-name { font-size:0.8rem; font-weight:600; color:#e2e8f0; margin-bottom:2px; }
-  .fp-path { font-size:0.7rem; color:#f6ad55; font-family:'Consolas',monospace; margin-bottom:3px; line-height:1.5; }
-  .fp-desc { font-size:0.71rem; color:#a0aec0; line-height:1.5; }
-  .tag { font-size:0.63rem; padding:2px 6px; border-radius:4px; font-weight:700; white-space:nowrap; align-self:flex-start; margin-top:2px; }
-  .t-cb   { background:#7b341e; color:#fbd38d; }
-  .t-zip  { background:#1a4040; color:#4fd1c5; }
-  .t-dep  { background:#2a2f6e; color:#a3bffa; }
-  .t-cfg  { background:#1a4731; color:#c6f6d5; }
-  .t-gw   { background:#0f2a1a; border:1px solid #48bb78; color:#68d391; }
-  .t-prom { background:#5a2d0a; color:#f6ad55; }
-  .t-act  { background:#1a3a3a; color:#81e6d9; }
+/* ── flow table ── */
+.ftable{width:100%;border-collapse:collapse;font-size:.78rem}
+.ftable th{background:#1e2535;padding:9px 12px;text-align:left;color:#90cdf4;font-weight:600;font-size:.7rem;letter-spacing:1px}
+.ftable td{padding:9px 12px;border-bottom:1px solid #1e2535;vertical-align:top}
+.ftable tr:last-child td{border-bottom:none}
+.ftable tr:hover td{background:#161b2a}
+.sb{display:inline-block;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-weight:700;font-size:.7rem}
+.sb-blue{background:#2b6cb0;color:#bee3f8}.sb-orange{background:#7b341e;color:#fbd38d}
+.sb-teal{background:#1a4040;color:#b2f5ea}.sb-red{background:#742a2a;color:#fed7d7}
+.sb-purple{background:#2c1654;color:#e9d8fd}.sb-green{background:#1a4731;color:#c6f6d5}
+.sb-yellow{background:#744210;color:#f6e05e}.sb-pink{background:#702459;color:#fbb6ce}
+.ac{color:#63b3ed;font-weight:600}.ag{color:#68d391;font-weight:600}
+.ao{color:#fbd38d;font-weight:600}.ae{color:#b794f4;font-weight:600}
+.ak{color:#d6bcfa;font-weight:600}.amq{color:#fc8181;font-weight:600}
 
-  /* port grid */
-  .pgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:12px; }
-  .pc { border-radius:10px; padding:13px; border-left:4px solid; }
-  .pc .pn { font-weight:700; font-size:0.85rem; margin-bottom:3px; }
-  .pc .pp { font-size:0.72rem; margin-bottom:7px; opacity:0.7; }
-  .pc ul  { padding-left:13px; font-size:0.71rem; color:#a0aec0; line-height:1.8; }
+/* ── port grid ── */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px}
+.pc{border-radius:10px;padding:12px;border-left:4px solid}
+.pc .pn{font-weight:700;font-size:.83rem;margin-bottom:2px}
+.pc .pp{font-size:.7rem;margin-bottom:6px;opacity:.7}
+.pc ul{padding-left:12px;font-size:.69rem;color:#a0aec0;line-height:1.8}
+
+/* ── messaging channel diagram ── */
+.channel-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.channel-box{border-radius:8px;padding:8px 14px;font-size:.72rem;font-weight:700;border:1px solid;text-align:center;min-width:130px}
+.ch-pub{background:#1a2f23;border-color:#48bb78;color:#68d391}
+.ch-sub{background:#0f2341;border-color:#4299e1;color:#63b3ed}
+.ch-topic{background:#2a1040;border-color:#9f7aea;color:#b794f4;font-family:monospace;font-size:.7rem}
+.ch-queue{background:#2d1015;border-color:#f56565;color:#fc8181;font-family:monospace;font-size:.7rem}
+.ch-arrow{color:#718096;font-size:1.1rem;flex-shrink:0}
+
+/* ── k8s resource ── */
+.k8s-res{display:inline-flex;align-items:center;gap:5px;background:#1e2535;border-radius:6px;padding:4px 10px;font-size:.68rem;color:#a0aec0;border:1px solid #2d3748;margin:3px}
+.k8s-res .kr-icon{font-size:.65rem;font-weight:700;padding:1px 4px;border-radius:4px}
+.kr-deploy{background:#1a3a5c;color:#63b3ed}.kr-svc{background:#1a4731;color:#68d391}
+.kr-cm{background:#744210;color:#f6e05e}.kr-sec{background:#742a2a;color:#fc8181}
+.kr-ing{background:#2c1654;color:#b794f4}.kr-pvc{background:#1a4040;color:#4fd1c5}
+.kr-hpa{background:#7b341e;color:#fbd38d}.kr-ns{background:#2d3748;color:#a0aec0}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.two-col{grid-template-columns:1fr}}
+
+/* ── auth flow ── */
+.auth-step{display:flex;gap:12px;padding:10px;border-bottom:1px solid #1e2535;align-items:flex-start}
+.auth-step:last-child{border-bottom:none}
+.auth-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0}
+.auth-title{font-size:.78rem;font-weight:600;margin-bottom:3px}
+.auth-desc{font-size:.7rem;color:#a0aec0;line-height:1.5}
+
+/* ── animated pulse ── */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s ease-in-out infinite}
 </style>
 </head>
 <body>
 
 <h1>Spring Microservice Architecture</h1>
-<p class="subtitle">Gateway · Eureka · LoadBalancer · Resilience4j · Zipkin · Prometheus · Grafana</p>
+<p class="subtitle">
+  Kubernetes · Keycloak · Spring Cloud Stream · Apache Kafka · RabbitMQ ·
+  Gateway · Eureka · Resilience4j · Zipkin · Prometheus · Grafana
+</p>
 
-<!-- ══════════════════════════════════════
-     SECTION 1 — Full Architecture
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">Full Architecture Overview</div>
-  <div style="display:flex;flex-direction:column;align-items:center;">
+<!-- ══ TABS ══ -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">Full Architecture</div>
+  <div class="tab" onclick="switchTab('k8s')">Kubernetes</div>
+  <div class="tab" onclick="switchTab('auth')">Keycloak Auth</div>
+  <div class="tab" onclick="switchTab('messaging')">Messaging</div>
+  <div class="tab" onclick="switchTab('flow')">Request Flow</div>
+  <div class="tab" onclick="switchTab('resilience')">Resilience4j</div>
+  <div class="tab" onclick="switchTab('ports')">Port Reference</div>
+</div>
 
-    <div class="client-box">CLIENT / Browser</div>
-    <div class="arr green"><div class="l"></div><div class="h"></div></div>
-    <div class="albl" style="color:#68d391;">Single entry :8080</div>
+<!-- ══════════════════════════════════════════════════
+     TAB 1 — FULL ARCHITECTURE OVERVIEW
+══════════════════════════════════════════════════ -->
+<div id="panel-overview" class="panel active">
 
-    <div class="box bx-gateway">
-      <div class="blbl">API GATEWAY</div>
-      <div class="bname">Gateway Service</div>
-      <div class="bport">:8080</div>
-      <div class="bsub">/users/** → lb://user-service<br>/orders/** → lb://order-service<br>/products/** → lb://product-service</div>
-      <div class="zt-badge">Zipkin Tracing</div>
+  <div class="card">
+    <div class="section-title">Full System Architecture — Kubernetes Deployment</div>
+
+    <!-- EXTERNAL CLIENT -->
+    <div class="col" style="margin-bottom:8px">
+      <div class="box bx-client">
+        <div class="blbl">External</div>
+        <div class="bname">Client / Browser</div>
+        <div class="bport">HTTPS / REST</div>
+      </div>
     </div>
-    <div class="arr green"><div class="l"></div><div class="h"></div></div>
-    <div class="albl" style="color:#68d391;">lb:// via Eureka</div>
+    <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+    <div class="albl">HTTPS :443 / HTTP :80</div>
 
-    <!-- 3 services -->
-    <div class="svc-row">
-      <div class="svc-col">
-        <div class="box bx-user">
-          <div class="blbl">SERVICE</div>
-          <div class="bname">User Service</div>
-          <div class="bport">:8081</div>
-          <div class="zt-badge">Zipkin Tracing</div>
+    <!-- KUBERNETES CLUSTER -->
+    <div class="k8s-cluster">
+      <span class="k8s-cluster-label">☸ Kubernetes Cluster</span>
+
+      <!-- NAMESPACE: ingress -->
+      <div class="k8s-ns ns-ingress">
+        <span class="k8s-ns-label">namespace: ingress</span>
+        <div class="col">
+          <div class="box bx-ingress">
+            <div class="blbl">Nginx / Traefik</div>
+            <div class="bname">Ingress Controller</div>
+            <div class="bport">:80 / :443</div>
+            <div class="bsub">TLS termination · Host-based routing</div>
+          </div>
         </div>
-        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
-        <div class="db-box db-user">H2 · user_service</div>
       </div>
-      <div class="svc-col">
-        <div class="box bx-order">
-          <div class="blbl">SERVICE + LOAD BALANCER</div>
-          <div class="bname">Order Service</div>
-          <div class="bport">:8082</div>
-          <div class="cb-badge">Circuit Breaker + Retry</div>
-          <div class="zt-badge">Zipkin Tracing</div>
-        </div>
-        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
-        <div class="db-box db-order">H2 · order_service</div>
-      </div>
-      <div class="svc-col">
-        <div class="box bx-product">
-          <div class="blbl">SERVICE</div>
-          <div class="bname">Product Service</div>
-          <div class="bport">:8083</div>
-          <div class="zt-badge">Zipkin Tracing</div>
-        </div>
-        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
-        <div class="db-box db-product">H2 · product_service</div>
-      </div>
-    </div>
 
-    <!-- Eureka -->
-    <div class="bidir-row">
-      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
-      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
-      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
-    </div>
-    <div class="albl" style="color:#b794f4; margin-top:2px;">register / heartbeat / discover</div>
-    <div class="box bx-eureka" style="margin-top:4px;">
-      <div class="blbl">SERVICE REGISTRY</div>
-      <div class="bname">Eureka Server</div>
-      <div class="bport">:8761</div>
-    </div>
+      <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+      <div class="albl">Route to Gateway</div>
 
-    <!-- Monitoring row -->
-    <div style="margin-top:28px;width:100%;display:flex;flex-direction:column;align-items:center;">
-      <div style="font-size:0.7rem;color:#dd6b20;letter-spacing:1px;margin-bottom:8px;">PROMETHEUS SCRAPES /actuator/prometheus EVERY 15s</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
-        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8080 gateway</span>
-        <span style="color:#dd6b20;">←</span>
-        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8081 user</span>
-        <span style="color:#dd6b20;">←</span>
-        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8082 order</span>
-        <span style="color:#dd6b20;">←</span>
-        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8083 product</span>
+      <!-- NAMESPACE: auth -->
+      <div class="k8s-ns ns-auth" style="margin-bottom:10px">
+        <span class="k8s-ns-label">namespace: auth</span>
+        <div class="row">
+          <div class="col">
+            <div class="box bx-keycloak">
+              <div class="blbl">Identity Provider · OAuth 2.0 / OIDC</div>
+              <div class="bname">Keycloak</div>
+              <div class="bport">:8180 (admin :8180/admin)</div>
+              <div class="bsub">
+                Realms · Clients · Roles · JWT Tokens<br>
+                <span class="badge bd-purple">PKCE</span>
+                <span class="badge bd-purple">Client Credentials</span>
+                <span class="badge bd-blue">JWKS Endpoint</span>
+              </div>
+            </div>
+            <div class="arr purple" style="margin-top:8px"><div class="l"></div><div class="h"></div></div>
+            <div class="db-box db-kc" style="margin-top:4px">keycloak-db (PostgreSQL)</div>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start;">
-        <!-- Prometheus → Grafana -->
-        <div style="display:flex;flex-direction:column;align-items:center;">
+
+      <!-- NAMESPACE: microservices -->
+      <div class="k8s-ns ns-svc">
+        <span class="k8s-ns-label">namespace: microservices</span>
+
+        <!-- Gateway + Eureka row -->
+        <div class="row" style="margin-bottom:12px">
+          <div class="col">
+            <div class="box bx-gateway">
+              <div class="blbl">Spring Cloud Gateway · JWT Validation</div>
+              <div class="bname">API Gateway</div>
+              <div class="bport">:8080</div>
+              <div class="bsub">
+                Route: /api/v1/users/** → user-service<br>
+                Route: /api/v1/orders/** → order-service<br>
+                Route: /api/v1/products/** → product-service<br>
+                <span class="badge bd-purple">Keycloak JWT Filter</span>
+                <span class="badge bd-teal">Zipkin</span>
+                <span class="badge bd-orange">Prometheus</span>
+              </div>
+            </div>
+          </div>
+          <div class="col" style="justify-content:center">
+            <div class="arr blue" style="transform:rotate(-90deg);margin:0 8px"><div class="l" style="height:40px"></div><div class="h"></div></div>
+            <div style="font-size:.62rem;color:#a0aec0;writing-mode:horizontal-tb">registers</div>
+          </div>
+          <div class="col">
+            <div class="box bx-eureka">
+              <div class="blbl">Service Registry · Spring Cloud Netflix</div>
+              <div class="bname">Eureka Server</div>
+              <div class="bport">:8761</div>
+              <div class="bsub">Service discovery · Health checks<br>Load-balanced routing (lb://)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="arr green"><div class="l"></div><div class="h"></div></div>
+        <div class="albl">Discovered route (lb://)</div>
+
+        <!-- Services row -->
+        <div class="row" style="margin-bottom:14px">
+
+          <!-- User Service -->
+          <div class="col">
+            <div class="box bx-user">
+              <div class="blbl">Spring Boot · JPA</div>
+              <div class="bname">User Service</div>
+              <div class="bport">:8081  /api/v1</div>
+              <div class="bsub">
+                CRUD · Auth Endpoints<br>
+                <span class="badge bd-teal">Stream</span>
+                <span class="badge bd-red">RabbitMQ</span>
+              </div>
+            </div>
+            <div class="arr green"><div class="l"></div><div class="h"></div></div>
+            <div class="db-box db-user">user-db (PostgreSQL)</div>
+          </div>
+
+          <!-- Order Service -->
+          <div class="col">
+            <div class="box bx-order">
+              <div class="blbl">Spring Boot · Resilience4j</div>
+              <div class="bname">Order Service</div>
+              <div class="bport">:8082  /api/v1</div>
+              <div class="bsub">
+                Circuit Breaker · Retry · Timeout<br>
+                <span class="badge bd-teal">Stream</span>
+                <span class="badge bd-purple">Kafka</span>
+              </div>
+            </div>
+            <div class="arr orange"><div class="l"></div><div class="h"></div></div>
+            <div class="db-box db-order">order-db (PostgreSQL)</div>
+          </div>
+
+          <!-- Product Service -->
+          <div class="col">
+            <div class="box bx-product">
+              <div class="blbl">Spring Boot · JPA</div>
+              <div class="bname">Product Service</div>
+              <div class="bport">:8083  /api/v1</div>
+              <div class="bsub">
+                Catalog · Inventory<br>
+                <span class="badge bd-teal">Stream</span>
+                <span class="badge bd-purple">Kafka</span>
+              </div>
+            </div>
+            <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+            <div class="db-box db-product">product-db (PostgreSQL)</div>
+          </div>
+
+        </div>
+
+        <!-- Spring Cloud Stream binder label -->
+        <div style="text-align:center;margin-bottom:10px">
+          <div class="box bx-stream" style="display:inline-block;padding:8px 24px">
+            <div class="blbl">Abstraction Layer</div>
+            <div class="bname">Spring Cloud Stream</div>
+            <div class="bsub">Binders: RabbitMQ (AMQP) + Kafka · @EnableBinding · Processor</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- NAMESPACE: messaging -->
+      <div class="k8s-ns ns-messaging" style="margin-top:10px">
+        <span class="k8s-ns-label">namespace: messaging</span>
+        <div class="row">
+
+          <div class="col">
+            <div class="box bx-rabbit">
+              <div class="blbl">AMQP Message Broker</div>
+              <div class="bname">RabbitMQ</div>
+              <div class="bport">:5672 (mgmt :15672)</div>
+              <div class="bsub">
+                Queues: user.events, order.notifications<br>
+                <span class="badge bd-red">user-registered</span>
+                <span class="badge bd-red">order-notification</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="box bx-kafka">
+              <div class="blbl">Event Streaming Platform</div>
+              <div class="bname">Apache Kafka</div>
+              <div class="bport">:9092 (UI :9021)</div>
+              <div class="bsub">
+                Topics: order-events, product-inventory<br>
+                <span class="badge bd-purple">order-placed</span>
+                <span class="badge bd-purple">inventory-update</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="box bx-zookeeper">
+              <div class="blbl">Kafka Coordination</div>
+              <div class="bname">Zookeeper</div>
+              <div class="bport">:2181</div>
+              <div class="bsub">Leader election<br>Config management</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- NAMESPACE: monitoring -->
+      <div class="k8s-ns ns-monitor" style="margin-top:10px">
+        <span class="k8s-ns-label">namespace: monitoring</span>
+        <div class="row">
           <div class="box bx-prom">
-            <div class="blbl">METRICS STORE</div>
+            <div class="blbl">Metrics Scraper</div>
             <div class="bname">Prometheus</div>
             <div class="bport">:9090</div>
+            <div class="bsub">Scrapes all services every 15s</div>
           </div>
-          <div class="arr orange"><div class="l"></div><div class="h"></div></div>
-          <div class="albl" style="color:#dd6b20;">PromQL queries</div>
           <div class="box bx-grafana">
-            <div class="blbl">VISUALIZATION</div>
+            <div class="blbl">Visualization</div>
             <div class="bname">Grafana</div>
-            <div class="bport">:3000 — Dashboard ID: 11378</div>
-          </div>
-        </div>
-        <!-- Zipkin -->
-        <div style="display:flex;flex-direction:column;align-items:center;margin-top:0;">
-          <div style="font-size:0.7rem;color:#38b2ac;letter-spacing:1px;margin-bottom:8px;">ALL SERVICES PUSH TRACES</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
-            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">gateway</span>
-            <span style="color:#38b2ac;">→</span>
-            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">user</span>
-            <span style="color:#38b2ac;">→</span>
-            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">order</span>
-            <span style="color:#38b2ac;">→</span>
-            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">product</span>
+            <div class="bport">:3000</div>
+            <div class="bsub">Dashboard ID 11378<br>admin / admin</div>
           </div>
           <div class="box bx-zipkin">
-            <div class="blbl">DISTRIBUTED TRACING</div>
+            <div class="blbl">Distributed Tracing</div>
             <div class="bname">Zipkin</div>
-            <div class="bport">:9411 — http://localhost:9411</div>
-            <div class="bsub">Traces full request path across services</div>
+            <div class="bport">:9411</div>
+            <div class="bsub">Brave + Micrometer<br>100% trace sampling</div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#48bb78"></div>Gateway :8080</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#9f7aea"></div>Eureka :8761</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c6f6d5;border:1px solid #48bb78"></div>User :8081</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#feebc8;border:1px solid #ed8936"></div>Order :8082 (CB+Retry)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#bee3f8;border:1px solid #4299e1"></div>Product :8083</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#dd6b20"></div>Prometheus :9090</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#f56565"></div>Grafana :3000</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#38b2ac"></div>Zipkin :9411</div>
+    </div><!-- /k8s-cluster -->
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     SECTION 2 — Circuit Breaker States
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">Circuit Breaker — State Machine (Resilience4j)</div>
-  <div class="state-row">
-    <div class="state-box state-closed">
-      <div class="sl">STATE</div>
-      <div class="sn">CLOSED</div>
-      <div class="sd">Normal operation.<br>Calls go through.<br>Failure rate monitored.</div>
-    </div>
-    <div class="state-arrow"><span class="sa">→</span><div>failure rate<br>&gt; 50% (10 calls)</div><span class="sa">→</span></div>
-    <div class="state-box state-open">
-      <div class="sl">STATE</div>
-      <div class="sn">OPEN</div>
-      <div class="sd">All calls BLOCKED.<br>Fallback method runs.<br>Waits 5 seconds.</div>
-    </div>
-    <div class="state-arrow"><span class="sa">→</span><div>after 5s<br>wait</div><span class="sa">→</span></div>
-    <div class="state-box state-half">
-      <div class="sl">STATE</div>
-      <div class="sn">HALF-OPEN</div>
-      <div class="sd">3 test calls allowed.<br>Success → CLOSED.<br>Failure → OPEN again.</div>
-    </div>
-  </div>
+<!-- ══════════════════════════════════════════════════
+     TAB 2 — KUBERNETES RESOURCES
+══════════════════════════════════════════════════ -->
+<div id="panel-k8s" class="panel">
+  <div class="card">
+    <div class="section-title">Kubernetes Resource Topology</div>
 
-  <table class="ftable">
-    <thead>
-      <tr><th>SETTING</th><th>VALUE</th><th>MEANING</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><code>slidingWindowSize</code></td><td>10</td><td>Monitor last 10 calls to decide state</td></tr>
-      <tr><td><code>failureRateThreshold</code></td><td>50%</td><td>Open circuit if ≥ 5 of 10 calls fail</td></tr>
-      <tr><td><code>waitDurationInOpenState</code></td><td>5s</td><td>Stay OPEN for 5 seconds before trying again</td></tr>
-      <tr><td><code>permittedNumberOfCallsInHalfOpenState</code></td><td>3</td><td>Allow 3 test calls in HALF-OPEN state</td></tr>
-      <tr><td><code>retry.maxAttempts</code></td><td>3</td><td>Retry failed calls up to 3 times before giving up</td></tr>
-      <tr><td><code>retry.waitDuration</code></td><td>1s</td><td>Wait 1 second between each retry attempt</td></tr>
-      <tr><td><code>timelimiter.timeoutDuration</code></td><td>3s</td><td>Timeout if service doesn't respond within 3 seconds</td></tr>
-    </tbody>
-  </table>
-</div>
+    <div class="two-col">
 
-<!-- ══════════════════════════════════════
-     SECTION 3 — Zipkin Trace Flow
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">Zipkin — How a Trace Flows</div>
-  <table class="ftable">
-    <thead>
-      <tr><th>#</th><th>SERVICE</th><th>SPAN</th><th>TRACE ID</th><th>WHAT ZIPKIN RECORDS</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="sb sb-teal">1</span></td>
-        <td><span class="ag">Gateway :8080</span></td>
-        <td>Root span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Receives request, creates new traceId, forwards to order-service</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">2</span></td>
-        <td><span class="ao">Order Service :8082</span></td>
-        <td>Child span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Receives forwarded request, same traceId propagated via HTTP headers</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">3</span></td>
-        <td><span class="ao">Order Service :8082</span></td>
-        <td>Child span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Calls user-service via @LoadBalanced RestTemplate — span recorded</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">4</span></td>
-        <td><span class="au">User Service :8081</span></td>
-        <td>Child span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Receives call, same traceId — full hop recorded in Zipkin</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">5</span></td>
-        <td><span class="ao">Order Service :8082</span></td>
-        <td>Child span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Calls product-service via @LoadBalanced RestTemplate — span recorded</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">6</span></td>
-        <td><span class="ap">Product Service :8083</span></td>
-        <td>Child span</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Receives call, same traceId — full hop recorded in Zipkin</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">7</span></td>
-        <td><span class="azt">Zipkin UI :9411</span></td>
-        <td>Complete trace</td>
-        <td><code>traceId=abc123</code></td>
-        <td>Shows full timeline: Gateway → Order → User + Product with latency per hop</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- ══════════════════════════════════════
-     SECTION 4 — POST /orders full trace
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">POST /api/v1/orders — Full Request Trace with Circuit Breaker</div>
-  <table class="ftable">
-    <thead>
-      <tr><th>#</th><th>FROM</th><th>TO</th><th>CALL</th><th>LAYER</th><th>WHAT HAPPENS</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="sb sb-blue">1</span></td>
-        <td><span class="ac">Client</span></td>
-        <td><span class="ag">Gateway :8080</span></td>
-        <td><code>POST /api/v1/orders</code></td>
-        <td>Gateway</td>
-        <td>Single entry point. Zipkin creates traceId.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">2</span></td>
-        <td><span class="ag">Gateway</span></td>
-        <td><span class="ae">Eureka :8761</span></td>
-        <td>Lookup order-service</td>
-        <td>Load Balance</td>
-        <td><code>lb://order-service</code> → resolved to :8082</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">3</span></td>
-        <td><span class="ag">Gateway</span></td>
-        <td><span class="ao">Order :8082</span></td>
-        <td>Proxied POST</td>
-        <td>Routing</td>
-        <td>TraceId propagated in HTTP headers.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-red">4</span></td>
-        <td><span class="ao">Order Service</span></td>
-        <td>Circuit Breaker</td>
-        <td>Check CB state for user-service</td>
-        <td>Circuit Breaker</td>
-        <td>If OPEN → fallback thrown immediately, skip step 5.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">5</span></td>
-        <td><span class="ao">Order Service</span></td>
-        <td><span class="au">User :8081</span></td>
-        <td><code>GET /api/v1/users/{id}</code></td>
-        <td>Retry (max 3×)</td>
-        <td>@Retry retries up to 3 times on failure. CB records success/fail.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-red">6</span></td>
-        <td><span class="ao">Order Service</span></td>
-        <td>Circuit Breaker</td>
-        <td>Check CB state for product-service</td>
-        <td>Circuit Breaker</td>
-        <td>If OPEN → fallback thrown immediately, skip step 7.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">7</span></td>
-        <td><span class="ao">Order Service</span></td>
-        <td><span class="ap">Product :8083</span></td>
-        <td><code>GET /api/v1/products/{id}</code></td>
-        <td>Retry (max 3×)</td>
-        <td>@Retry retries up to 3 times on failure. CB records success/fail.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">8</span></td>
-        <td><span class="ao">Order Service</span></td>
-        <td><span class="adb">H2 DB</span></td>
-        <td><code>INSERT INTO orders</code></td>
-        <td>Persistence</td>
-        <td>Saved only if both validations passed.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-teal">9</span></td>
-        <td>All services</td>
-        <td><span class="azt">Zipkin :9411</span></td>
-        <td>Push spans</td>
-        <td>Tracing</td>
-        <td>Each service sends its span. Full trace visible at :9411.</td>
-      </tr>
-      <tr>
-        <td><span class="sb sb-blue">10</span></td>
-        <td><span class="ag">Gateway</span></td>
-        <td><span class="ac">Client</span></td>
-        <td><code>200 OK</code> or <code>503 fallback</code></td>
-        <td>Response</td>
-        <td>Order JSON returned, or circuit-open error message.</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- ══════════════════════════════════════
-     SECTION 5 — File Paths
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">Exact File Paths — All Components</div>
-
-  <!-- Zipkin -->
-  <div class="fp-group">
-    <div class="fp-gtitle" style="color:#4fd1c5;">Zipkin — Distributed Tracing</div>
-    <div class="fp-row">
-      <div class="fp-icon ic-xml">POM</div>
-      <div class="fp-info">
-        <div class="fp-name">micrometer-tracing-bridge-brave + zipkin-reporter-brave (all 4 services)</div>
-        <div class="fp-path">user-service / order-service / product-service / gateway-service — pom.xml</div>
-        <div class="fp-desc">Adds Brave tracer bridge. Every HTTP call automatically gets a traceId + spanId injected into headers and sent to Zipkin.</div>
-      </div>
-      <span class="tag t-dep">DEPENDENCY</span>
-    </div>
-    <div class="fp-row">
-      <div class="fp-icon ic-yml">YML</div>
-      <div class="fp-info">
-        <div class="fp-name">Zipkin endpoint config (all 4 application.yml)</div>
-        <div class="fp-path">user-service / order-service / product-service / gateway-service — application.yml</div>
-        <div class="fp-desc">
-          <code>management.zipkin.tracing.endpoint: http://localhost:9411/api/v2/spans</code><br>
-          <code>management.tracing.sampling.probability: 1.0</code> — trace 100% of requests
+      <!-- Left col -->
+      <div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:.72rem;font-weight:700;color:#68d391;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase">namespace: microservices</div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px">
+            <div style="font-size:.7rem;color:#90cdf4;margin-bottom:6px;font-weight:600">Gateway Service</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>gateway-service (1-3 replicas)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8080</span>
+            <span class="k8s-res"><span class="kr-icon kr-ing">Ing</span>gateway.microservice.local</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>gateway-config</span>
+            <span class="k8s-res"><span class="kr-icon kr-hpa">HPA</span>2–6 pods · CPU 70%</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#b794f4;margin-bottom:6px;font-weight:600">Eureka Server</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>eureka-server (1 replica)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8761</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>eureka-config</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#68d391;margin-bottom:6px;font-weight:600">User Service</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>user-service (2-4 replicas)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8081</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>user-config</span>
+            <span class="k8s-res"><span class="kr-icon kr-sec">Sec</span>user-db-credentials</span>
+            <span class="k8s-res"><span class="kr-icon kr-hpa">HPA</span>2–8 pods · CPU 60%</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#fbd38d;margin-bottom:6px;font-weight:600">Order Service</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>order-service (2-4 replicas)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8082</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>order-config (CB settings)</span>
+            <span class="k8s-res"><span class="kr-icon kr-sec">Sec</span>order-db-credentials</span>
+            <span class="k8s-res"><span class="kr-icon kr-hpa">HPA</span>2–10 pods · CPU 70%</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#63b3ed;margin-bottom:6px;font-weight:600">Product Service</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>product-service (2-4 replicas)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8083</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>product-config</span>
+            <span class="k8s-res"><span class="kr-icon kr-sec">Sec</span>product-db-credentials</span>
+            <span class="k8s-res"><span class="kr-icon kr-hpa">HPA</span>2–6 pods · CPU 60%</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#a0aec0;margin-bottom:6px;font-weight:600">Databases (StatefulSets)</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>user-db (PostgreSQL)</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>user-db-pvc 5Gi</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>order-db (PostgreSQL)</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>order-db-pvc 5Gi</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>product-db (PostgreSQL)</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>product-db-pvc 5Gi</span>
+          </div>
         </div>
       </div>
-      <span class="tag t-zip">ZIPKIN</span>
-    </div>
-  </div>
 
-  <!-- Circuit Breaker -->
-  <div class="fp-group">
-    <div class="fp-gtitle" style="color:#fbd38d;">Circuit Breaker + Retry + Fault Tolerance (Order Service only)</div>
-    <div class="fp-row">
-      <div class="fp-icon ic-xml">POM</div>
-      <div class="fp-info">
-        <div class="fp-name">spring-cloud-starter-circuitbreaker-resilience4j + spring-boot-starter-aop</div>
-        <div class="fp-path">order-service/pom.xml</div>
-        <div class="fp-desc">Resilience4j library. AOP is required for <code>@CircuitBreaker</code> and <code>@Retry</code> annotations to work.</div>
-      </div>
-      <span class="tag t-dep">DEPENDENCY</span>
-    </div>
-    <div class="fp-row">
-      <div class="fp-icon ic-java">CLT</div>
-      <div class="fp-info">
-        <div class="fp-name">OrderServiceClient.java</div>
-        <div class="fp-path">order-service/src/main/java/com/microservice/order/client/OrderServiceClient.java</div>
-        <div class="fp-desc">
-          Contains the circuit-breaker logic as a separate Spring bean (required for AOP to intercept calls):<br>
-          <code>@CircuitBreaker(name="user-service", fallbackMethod="userServiceFallback")</code><br>
-          <code>@Retry(name="user-service")</code> on <code>getUser()</code><br>
-          Same pattern for <code>getProduct()</code> → <code>product-service</code><br>
-          Fallback methods throw a clear error when the circuit is open.
+      <!-- Right col -->
+      <div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:.72rem;font-weight:700;color:#d6bcfa;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase">namespace: auth</div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px">
+            <div style="font-size:.7rem;color:#d6bcfa;margin-bottom:6px;font-weight:600">Keycloak</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>keycloak (2 replicas)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :8180</span>
+            <span class="k8s-res"><span class="kr-icon kr-ing">Ing</span>auth.microservice.local</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>keycloak-realm-config</span>
+            <span class="k8s-res"><span class="kr-icon kr-sec">Sec</span>keycloak-admin-credentials</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>keycloak-db (PostgreSQL)</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>keycloak-db-pvc 2Gi</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:.72rem;font-weight:700;color:#fbd38d;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase">namespace: messaging</div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px">
+            <div style="font-size:.7rem;color:#fc8181;margin-bottom:6px;font-weight:600">RabbitMQ</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>rabbitmq (3-node cluster)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :5672 / :15672</span>
+            <span class="k8s-res"><span class="kr-icon kr-cm">CM</span>rabbitmq-config</span>
+            <span class="k8s-res"><span class="kr-icon kr-sec">Sec</span>rabbitmq-credentials</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>rabbitmq-pvc 3Gi</span>
+          </div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px;margin-top:8px">
+            <div style="font-size:.7rem;color:#d6bcfa;margin-bottom:6px;font-weight:600">Apache Kafka</div>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>kafka (3-node cluster)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :9092 / :9021</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>kafka-pvc 10Gi per broker</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">SS</span>zookeeper (3 nodes)</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>ClusterIP :2181</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>zookeeper-pvc 2Gi</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:.72rem;font-weight:700;color:#fc8181;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase">namespace: monitoring</div>
+          <div style="padding:10px;background:#0f1520;border-radius:8px">
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>prometheus</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>:9090</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>prometheus-pvc 10Gi</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>grafana</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>:3000</span>
+            <span class="k8s-res"><span class="kr-icon kr-pvc">PVC</span>grafana-pvc 2Gi</span>
+            <span class="k8s-res"><span class="kr-icon kr-deploy">Deploy</span>zipkin</span>
+            <span class="k8s-res"><span class="kr-icon kr-svc">Svc</span>:9411</span>
+          </div>
         </div>
       </div>
-      <span class="tag t-cb">CIRCUIT BREAKER</span>
-    </div>
-    <div class="fp-row">
-      <div class="fp-icon ic-java">SVC</div>
-      <div class="fp-info">
-        <div class="fp-name">OrderService.java</div>
-        <div class="fp-path">order-service/src/main/java/com/microservice/order/service/OrderService.java</div>
-        <div class="fp-desc">Injects <code>OrderServiceClient</code> and calls <code>serviceClient.getUser()</code> and <code>serviceClient.getProduct()</code> — circuit breaker and retry are transparent.</div>
-      </div>
-      <span class="tag t-cb">USES CB</span>
-    </div>
-    <div class="fp-row">
-      <div class="fp-icon ic-yml">YML</div>
-      <div class="fp-info">
-        <div class="fp-name">Resilience4j config</div>
-        <div class="fp-path">order-service/src/main/resources/application.yml</div>
-        <div class="fp-desc">
-          Circuit breaker: <code>slidingWindowSize:10</code>, <code>failureRateThreshold:50</code>, <code>waitDurationInOpenState:5s</code><br>
-          Retry: <code>maxAttempts:3</code>, <code>waitDuration:1s</code><br>
-          TimeLimiter: <code>timeoutDuration:3s</code>
-        </div>
-      </div>
-      <span class="tag t-cfg">CONFIG</span>
-    </div>
-  </div>
 
-  <!-- Prometheus + Grafana -->
-  <div class="fp-group">
-    <div class="fp-gtitle" style="color:#f6ad55;">Prometheus + Grafana</div>
-    <div class="fp-row">
-      <div class="fp-icon ic-xml">POM</div>
-      <div class="fp-info">
-        <div class="fp-name">spring-boot-starter-actuator + micrometer-registry-prometheus (all 4)</div>
-        <div class="fp-path">user-service / order-service / product-service / gateway-service — pom.xml</div>
-        <div class="fp-desc">Exposes <code>/actuator/prometheus</code> endpoint with metrics in Prometheus text format.</div>
+    </div><!-- /two-col -->
+
+    <!-- Helm note -->
+    <div style="margin-top:16px;padding:12px;background:#161b2a;border-radius:8px;border-left:3px solid #ecc94b">
+      <div style="font-size:.72rem;color:#f6e05e;font-weight:700;margin-bottom:5px;letter-spacing:1px">HELM CHARTS</div>
+      <div style="font-size:.7rem;color:#a0aec0;line-height:1.8">
+        <code>helm install keycloak bitnami/keycloak --namespace auth</code><br>
+        <code>helm install rabbitmq bitnami/rabbitmq --namespace messaging</code><br>
+        <code>helm install kafka bitnami/kafka --namespace messaging</code><br>
+        <code>helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring</code>
       </div>
-      <span class="tag t-prom">PROMETHEUS</span>
-    </div>
-    <div class="fp-row">
-      <div class="fp-icon ic-yml">YML</div>
-      <div class="fp-info">
-        <div class="fp-name">prometheus.yml — scrape config</div>
-        <div class="fp-path">monitoring/prometheus.yml</div>
-        <div class="fp-desc">Scrapes all 4 services every 15s. Run: <code>.\prometheus.exe --config.file=prometheus.yml</code></div>
-      </div>
-      <span class="tag t-prom">CONFIG</span>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     SECTION 6 — Port Summary
-══════════════════════════════════════ -->
-<div class="card">
-  <div class="section-title">Port &amp; Service Summary</div>
-  <div class="pgrid">
-    <div class="pc" style="background:#0f2a1a;border-color:#48bb78;">
-      <div class="pn" style="color:#c6f6d5;">Gateway Service</div>
-      <div class="pp" style="color:#68d391;">:8080</div>
-      <ul><li>Single entry point</li><li>Path-based routing</li><li>lb:// load balancing</li><li>Zipkin tracing</li></ul>
+<!-- ══════════════════════════════════════════════════
+     TAB 3 — KEYCLOAK AUTH FLOW
+══════════════════════════════════════════════════ -->
+<div id="panel-auth" class="panel">
+
+  <div class="card">
+    <div class="section-title">Keycloak OAuth 2.0 / OIDC Authentication Flow</div>
+
+    <!-- Overview diagram -->
+    <div class="col" style="margin-bottom:20px">
+      <div class="box bx-client">
+        <div class="blbl">Browser / API Client</div>
+        <div class="bname">Client Application</div>
+        <div class="bsub">
+          <span class="badge bd-blue">Authorization Code + PKCE</span>
+          <span class="badge bd-blue">Client Credentials</span>
+        </div>
+      </div>
+      <div class="arr purple"><div class="l"></div><div class="h"></div></div>
+      <div class="albl">1. Redirect to Keycloak / POST credentials</div>
+      <div class="box bx-keycloak" style="margin-bottom:6px">
+        <div class="blbl">OAuth 2.0 / OIDC Provider</div>
+        <div class="bname">Keycloak :8180</div>
+        <div class="bsub">
+          Realm: microservice-realm<br>
+          <span class="badge bd-purple">Validate credentials</span>
+          <span class="badge bd-blue">Issue JWT (access + refresh)</span>
+        </div>
+      </div>
+      <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+      <div class="albl">2. Return JWT Access Token (RS256)</div>
+      <div class="box bx-gateway" style="margin-bottom:6px">
+        <div class="blbl">Spring Cloud Gateway · Security Filter</div>
+        <div class="bname">API Gateway :8080</div>
+        <div class="bsub">
+          Verify JWT signature via JWKS endpoint<br>
+          <span class="badge bd-purple">spring-security-oauth2-resource-server</span>
+          <span class="badge bd-green">Propagate X-Auth-User header</span>
+        </div>
+      </div>
+      <div class="arr green"><div class="l"></div><div class="h"></div></div>
+      <div class="albl">3. Validated request + user claims</div>
+      <div class="row">
+        <div class="box bx-user"><div class="bname">User Service</div><div class="bsub">@PreAuthorize<br>role: USER / ADMIN</div></div>
+        <div class="box bx-order"><div class="bname">Order Service</div><div class="bsub">@PreAuthorize<br>role: USER</div></div>
+        <div class="box bx-product"><div class="bname">Product Service</div><div class="bsub">@PreAuthorize<br>role: USER / ADMIN</div></div>
+      </div>
     </div>
-    <div class="pc" style="background:#2c1654;border-color:#9f7aea;">
-      <div class="pn" style="color:#e9d8fd;">Eureka Server</div>
-      <div class="pp" style="color:#9f7aea;">:8761</div>
-      <ul><li>Service registry</li><li>Dashboard at :8761</li><li>Heartbeat every 30s</li></ul>
-    </div>
-    <div class="pc" style="background:#1a2f23;border-color:#48bb78;">
-      <div class="pn" style="color:#c6f6d5;">User Service</div>
-      <div class="pp" style="color:#68d391;">:8081</div>
-      <ul><li>CRUD users</li><li>H2 DB</li><li>Eureka client</li><li>Zipkin tracing</li></ul>
-    </div>
-    <div class="pc" style="background:#2a1f0f;border-color:#ed8936;">
-      <div class="pn" style="color:#feebc8;">Order Service</div>
-      <div class="pp" style="color:#fbd38d;">:8082</div>
-      <ul><li>CRUD orders</li><li>@LoadBalanced RestTemplate</li><li>Circuit Breaker + Retry</li><li>Timeout 3s</li><li>Fallback on failure</li><li>Zipkin tracing</li></ul>
-    </div>
-    <div class="pc" style="background:#0f2341;border-color:#4299e1;">
-      <div class="pn" style="color:#bee3f8;">Product Service</div>
-      <div class="pp" style="color:#63b3ed;">:8083</div>
-      <ul><li>CRUD products</li><li>H2 DB</li><li>Eureka client</li><li>Zipkin tracing</li></ul>
-    </div>
-    <div class="pc" style="background:#2d1a0a;border-color:#dd6b20;">
-      <div class="pn" style="color:#fbd38d;">Prometheus</div>
-      <div class="pp" style="color:#dd6b20;">:9090 (external)</div>
-      <ul><li>Scrapes 4 services</li><li>monitoring/prometheus.yml</li><li>Windows binary</li></ul>
-    </div>
-    <div class="pc" style="background:#1a0a2d;border-color:#f56565;">
-      <div class="pn" style="color:#fed7d7;">Grafana</div>
-      <div class="pp" style="color:#f56565;">:3000 (external)</div>
-      <ul><li>Dashboard ID: 11378</li><li>admin / admin</li><li>Windows installer</li></ul>
-    </div>
-    <div class="pc" style="background:#0a1f2d;border-color:#38b2ac;">
-      <div class="pn" style="color:#b2f5ea;">Zipkin</div>
-      <div class="pp" style="color:#38b2ac;">:9411 (external)</div>
-      <ul><li>Distributed tracing UI</li><li>Run: <code>java -jar zipkin.jar</code></li><li>Download: zipkin.io/quickstart</li></ul>
-    </div>
+
   </div>
 
-  <div style="margin-top:16px;background:#0a1f2d;border:1px solid #38b2ac;border-radius:8px;padding:14px;">
-    <div style="font-size:0.78rem;font-weight:700;color:#4fd1c5;margin-bottom:8px;">Start Zipkin on Windows (no Docker needed):</div>
-    <div style="font-size:0.74rem;color:#a0aec0;line-height:2;font-family:Consolas,monospace;">
-      1. Download: <span style="color:#b2f5ea;">curl -sSL https://zipkin.io/quickstart.sh | bash -s</span> &nbsp;(or download zipkin.jar manually)<br>
-      2. Start: <span style="color:#b2f5ea;">java -jar zipkin.jar</span><br>
-      3. Open UI: <span style="color:#b2f5ea;">http://localhost:9411</span><br>
-      4. Make any request through Gateway → traces appear automatically
+  <div class="card">
+    <div class="section-title">Step-by-Step Auth Flow</div>
+
+    <div class="auth-step">
+      <div class="auth-num" style="background:#2c1654;color:#d6bcfa">1</div>
+      <div>
+        <div class="auth-title" style="color:#d6bcfa">Client → Keycloak: Request Token</div>
+        <div class="auth-desc">
+          Browser: GET <code>/auth/realms/microservice-realm/protocol/openid-connect/auth?client_id=gateway&response_type=code&scope=openid+profile&code_challenge=…&code_challenge_method=S256</code><br>
+          Service-to-service: POST <code>/protocol/openid-connect/token</code> with <code>grant_type=client_credentials</code>
+        </div>
+      </div>
+    </div>
+    <div class="auth-step">
+      <div class="auth-num" style="background:#2c1654;color:#d6bcfa">2</div>
+      <div>
+        <div class="auth-title" style="color:#d6bcfa">Keycloak: Authenticate + Issue JWT</div>
+        <div class="auth-desc">
+          Keycloak validates credentials, maps roles from realm / client scopes, and returns a signed JWT (RS256).<br>
+          Token contains: <code>sub</code>, <code>realm_access.roles</code>, <code>resource_access</code>, <code>exp</code>, <code>iat</code>
+        </div>
+      </div>
+    </div>
+    <div class="auth-step">
+      <div class="auth-num" style="background:#1a3a5c;color:#63b3ed">3</div>
+      <div>
+        <div class="auth-title" style="color:#63b3ed">Client → Gateway: API Request with Bearer Token</div>
+        <div class="auth-desc">
+          <code>Authorization: Bearer &lt;access_token&gt;</code> is included in every API request sent to the Gateway.
+        </div>
+      </div>
+    </div>
+    <div class="auth-step">
+      <div class="auth-num" style="background:#0f2a1a;color:#68d391">4</div>
+      <div>
+        <div class="auth-title" style="color:#68d391">Gateway: JWT Validation via JWKS</div>
+        <div class="auth-desc">
+          Spring Security Resource Server filter fetches JWKS from <code>http://keycloak:8180/realms/microservice-realm/protocol/openid-connect/certs</code>,
+          verifies JWT signature, expiry and audience. Rejected requests get <strong>401 Unauthorized</strong> immediately — services are never called.
+        </div>
+      </div>
+    </div>
+    <div class="auth-step">
+      <div class="auth-num" style="background:#0f2a1a;color:#68d391">5</div>
+      <div>
+        <div class="auth-title" style="color:#68d391">Gateway → Downstream Services</div>
+        <div class="auth-desc">
+          Gateway strips the raw JWT and propagates only decoded user headers: <code>X-Auth-User-Id</code>, <code>X-Auth-User-Roles</code>, <code>X-Auth-User-Email</code>.
+          Each downstream service also acts as a resource server and re-validates with <code>@PreAuthorize("hasRole('USER')")</code>.
+        </div>
+      </div>
+    </div>
+    <div class="auth-step">
+      <div class="auth-num" style="background:#744210;color:#f6e05e">6</div>
+      <div>
+        <div class="auth-title" style="color:#f6e05e">Token Refresh</div>
+        <div class="auth-desc">
+          When access token expires, client sends refresh token to <code>POST /protocol/openid-connect/token</code> with <code>grant_type=refresh_token</code>.
+          Keycloak issues a new access token without requiring re-authentication.
+        </div>
+      </div>
+    </div>
+
+    <!-- Keycloak config summary -->
+    <div style="margin-top:16px;padding:12px;background:#161b2a;border-radius:8px">
+      <div style="font-size:.72rem;color:#d6bcfa;font-weight:700;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase">Keycloak Configuration Summary</div>
+      <table class="ftable">
+        <tr><th>Setting</th><th>Value</th></tr>
+        <tr><td>Realm</td><td><code>microservice-realm</code></td></tr>
+        <tr><td>Clients</td><td><code>gateway-client</code>, <code>user-service</code>, <code>order-service</code>, <code>product-service</code></td></tr>
+        <tr><td>Roles</td><td><code>ROLE_USER</code>, <code>ROLE_ADMIN</code>, <code>ROLE_SERVICE</code></td></tr>
+        <tr><td>Token algorithm</td><td>RS256 (asymmetric)</td></tr>
+        <tr><td>Access token lifetime</td><td>5 minutes</td></tr>
+        <tr><td>Refresh token lifetime</td><td>30 minutes</td></tr>
+        <tr><td>JWKS endpoint</td><td><code>/realms/microservice-realm/protocol/openid-connect/certs</code></td></tr>
+        <tr><td>Admin console</td><td><code>http://localhost:8180/admin</code> (admin/admin)</td></tr>
+      </table>
     </div>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     TAB 4 — MESSAGING (RabbitMQ + Kafka + Stream)
+══════════════════════════════════════════════════ -->
+<div id="panel-messaging" class="panel">
+
+  <div class="card">
+    <div class="section-title">Spring Cloud Stream — Binder Architecture</div>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="box bx-stream" style="display:inline-block;max-width:640px;width:100%">
+        <div class="blbl">Unified Messaging Abstraction</div>
+        <div class="bname">Spring Cloud Stream</div>
+        <div class="bsub">
+          Decouples application code from broker implementation.<br>
+          Same <code>@Input</code> / <code>@Output</code> / <code>StreamListener</code> annotations work for both brokers.
+          Binders are pluggable: swap RabbitMQ ↔ Kafka via <code>application.yml</code> alone.
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div style="font-size:.72rem;font-weight:700;color:#fc8181;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">RabbitMQ Binder (AMQP)</div>
+
+        <div style="padding:12px;background:#1a0d10;border-radius:10px;border:1px solid #742a2a;margin-bottom:12px">
+          <div style="font-size:.7rem;color:#f6ad55;font-weight:600;margin-bottom:8px">Queue: user.events</div>
+          <div class="channel-row">
+            <div class="channel-box ch-pub">User Service<br><small>Publisher</small></div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-topic" style="background:#2d1015;border-color:#f56565">Exchange: user-events<br>Queue: user.events</div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-sub" style="background:#0f2341;border-color:#4299e1">Notification<br>Consumer</div>
+          </div>
+          <div style="font-size:.68rem;color:#718096;margin-top:6px">
+            Message: <code>{ "userId": "…", "email": "…", "event": "USER_REGISTERED" }</code>
+          </div>
+        </div>
+
+        <div style="padding:12px;background:#1a0d10;border-radius:10px;border:1px solid #742a2a;margin-bottom:12px">
+          <div style="font-size:.7rem;color:#f6ad55;font-weight:600;margin-bottom:8px">Queue: order.notifications</div>
+          <div class="channel-row">
+            <div class="channel-box ch-pub">Order Service<br><small>Publisher</small></div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-topic" style="background:#2d1015;border-color:#f56565">Exchange: order-notify<br>Queue: order.notifications</div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-sub" style="background:#1a2f23;border-color:#48bb78">User Service<br>Consumer</div>
+          </div>
+          <div style="font-size:.68rem;color:#718096;margin-top:6px">
+            Message: <code>{ "orderId": "…", "userId": "…", "status": "CONFIRMED" }</code>
+          </div>
+        </div>
+
+        <div style="padding:10px;background:#0f1520;border-radius:8px">
+          <div style="font-size:.68rem;color:#a0aec0;line-height:1.8">
+            <div style="color:#fc8181;font-weight:600;margin-bottom:4px">application.yml (RabbitMQ Binder)</div>
+            <code style="display:block;white-space:pre;font-size:.67rem;line-height:1.7">
+spring:
+  cloud:
+    stream:
+      binders:
+        rabbit:
+          type: rabbit
+          environment:
+            spring.rabbitmq:
+              host: rabbitmq
+              port: 5672
+              username: guest
+              password: guest
+      bindings:
+        user-events-out:
+          destination: user-events
+          binder: rabbit
+        order-notifications-in:
+          destination: order.notifications
+          binder: rabbit
+            </code>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:.72rem;font-weight:700;color:#d6bcfa;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">Kafka Binder (Event Streaming)</div>
+
+        <div style="padding:12px;background:#110d1a;border-radius:10px;border:1px solid #553c9a;margin-bottom:12px">
+          <div style="font-size:.7rem;color:#d6bcfa;font-weight:600;margin-bottom:8px">Topic: order-events (3 partitions, RF 2)</div>
+          <div class="channel-row">
+            <div class="channel-box ch-pub" style="background:#2a1f0f;border-color:#ed8936;color:#fbd38d">Order Service<br><small>Producer</small></div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-topic">order-events<br>key: orderId</div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-sub" style="background:#0f2341;border-color:#4299e1">Product Service<br>Consumer Group</div>
+          </div>
+          <div style="font-size:.68rem;color:#718096;margin-top:6px">
+            Message: <code>{ "orderId": "…", "items": […], "event": "ORDER_PLACED" }</code>
+          </div>
+        </div>
+
+        <div style="padding:12px;background:#110d1a;border-radius:10px;border:1px solid #553c9a;margin-bottom:12px">
+          <div style="font-size:.7rem;color:#d6bcfa;font-weight:600;margin-bottom:8px">Topic: product-inventory (3 partitions, RF 2)</div>
+          <div class="channel-row">
+            <div class="channel-box ch-pub" style="background:#0f2341;border-color:#4299e1;color:#63b3ed">Product Service<br><small>Producer</small></div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-topic">product-inventory<br>key: productId</div>
+            <span class="ch-arrow">→</span>
+            <div class="channel-box ch-sub" style="background:#2a1f0f;border-color:#ed8936;color:#fbd38d">Order Service<br>Consumer Group</div>
+          </div>
+          <div style="font-size:.68rem;color:#718096;margin-top:6px">
+            Message: <code>{ "productId": "…", "stock": 42, "event": "INVENTORY_UPDATED" }</code>
+          </div>
+        </div>
+
+        <div style="padding:10px;background:#0f1520;border-radius:8px">
+          <div style="font-size:.68rem;color:#a0aec0;line-height:1.8">
+            <div style="color:#d6bcfa;font-weight:600;margin-bottom:4px">application.yml (Kafka Binder)</div>
+            <code style="display:block;white-space:pre;font-size:.67rem;line-height:1.7">
+spring:
+  cloud:
+    stream:
+      binders:
+        kafka:
+          type: kafka
+          environment:
+            spring.cloud.stream.kafka:
+              binder.brokers: kafka:9092
+      bindings:
+        order-events-out:
+          destination: order-events
+          binder: kafka
+        product-inventory-in:
+          destination: product-inventory
+          binder: kafka
+          group: order-service-group
+            </code>
+          </div>
+        </div>
+      </div>
+    </div><!-- /two-col -->
+  </div>
+
+  <div class="card">
+    <div class="section-title">Messaging Flow: Order Placement (Event-Driven)</div>
+    <table class="ftable">
+      <thead>
+        <tr><th>#</th><th>Component</th><th>Action</th><th>Broker</th><th>Message</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="sb sb-blue">1</span></td>
+          <td class="ac">API Gateway</td>
+          <td>Routes authenticated POST /api/v1/orders to Order Service</td>
+          <td>—</td>
+          <td>HTTP request with JWT claims</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">2</span></td>
+          <td class="ao">Order Service</td>
+          <td>Validates request, persists Order (status=PENDING) in order-db</td>
+          <td>—</td>
+          <td>SQL INSERT</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-purple">3</span></td>
+          <td class="ao">Order Service → Kafka</td>
+          <td>Publishes <code>ORDER_PLACED</code> event via Spring Cloud Stream</td>
+          <td><span class="badge bd-purple">Kafka</span> order-events</td>
+          <td><code>{ orderId, items[], userId }</code></td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-blue">4</span></td>
+          <td class="ap">Product Service</td>
+          <td>Consumes <code>ORDER_PLACED</code>, decrements stock for each item</td>
+          <td><span class="badge bd-purple">Kafka</span> order-events</td>
+          <td>Inventory adjustment</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-blue">5</span></td>
+          <td class="ap">Product Service → Kafka</td>
+          <td>Publishes <code>INVENTORY_UPDATED</code> event</td>
+          <td><span class="badge bd-purple">Kafka</span> product-inventory</td>
+          <td><code>{ productId, newStock }</code></td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">6</span></td>
+          <td class="ao">Order Service</td>
+          <td>Consumes <code>INVENTORY_UPDATED</code>, updates Order status=CONFIRMED</td>
+          <td><span class="badge bd-purple">Kafka</span> product-inventory</td>
+          <td>Status update</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-red">7</span></td>
+          <td class="ao">Order Service → RabbitMQ</td>
+          <td>Publishes <code>ORDER_CONFIRMED</code> notification via Spring Cloud Stream</td>
+          <td><span class="badge bd-red">RabbitMQ</span> order.notifications</td>
+          <td><code>{ orderId, userId, status: CONFIRMED }</code></td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-green">8</span></td>
+          <td class="ag">User Service</td>
+          <td>Consumes notification, sends email/push to user</td>
+          <td><span class="badge bd-red">RabbitMQ</span> order.notifications</td>
+          <td>Notification dispatch</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     TAB 5 — REQUEST FLOW
+══════════════════════════════════════════════════ -->
+<div id="panel-flow" class="panel">
+  <div class="card">
+    <div class="section-title">POST /api/v1/orders — Full Authenticated Request Flow</div>
+    <table class="ftable">
+      <thead>
+        <tr><th>#</th><th>From</th><th>To</th><th>Detail</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="sb sb-purple">1</span></td>
+          <td>Client</td>
+          <td class="ak">Keycloak :8180</td>
+          <td>POST <code>/token</code> with credentials → receive JWT access token (RS256)</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-blue">2</span></td>
+          <td>Client</td>
+          <td class="ac">Ingress :443</td>
+          <td>HTTPS POST <code>/api/v1/orders</code> with <code>Authorization: Bearer &lt;JWT&gt;</code></td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-blue">3</span></td>
+          <td class="ac">Ingress</td>
+          <td class="ag">Gateway :8080</td>
+          <td>Forward to gateway pod (TLS terminated)</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-purple">4</span></td>
+          <td class="ag">Gateway</td>
+          <td class="ak">Keycloak JWKS</td>
+          <td>Validate JWT signature · Check expiry · Extract roles<br>→ <strong style="color:#f56565">401</strong> if invalid, else continue</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-blue">5</span></td>
+          <td class="ag">Gateway</td>
+          <td class="ae">Eureka :8761</td>
+          <td>Resolve <code>lb://order-service</code> → get healthy pod IPs</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">6</span></td>
+          <td class="ag">Gateway</td>
+          <td class="ao">Order Service :8082</td>
+          <td>Forward request + <code>X-Auth-User-*</code> headers + traceId (Zipkin B3)</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">7</span></td>
+          <td class="ao">Order Service</td>
+          <td class="ag">User Service :8081</td>
+          <td>Verify user exists via <strong>Circuit Breaker</strong> @LoadBalanced call<br><span class="badge bd-orange">CB: CLOSED</span> → proceed; <span class="badge bd-red">CB: OPEN</span> → fallback</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">8</span></td>
+          <td class="ao">Order Service</td>
+          <td class="ap">Product Service :8083</td>
+          <td>Validate product exists + price via Circuit Breaker call<br><span class="badge bd-orange">Retry</span> max 3× with 1s backoff · <span class="badge bd-orange">Timeout</span> 3s</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">9</span></td>
+          <td class="ao">Order Service</td>
+          <td><span style="color:#a0aec0">order-db</span></td>
+          <td>INSERT order record (status=PENDING) → PostgreSQL via JPA</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-purple">10</span></td>
+          <td class="ao">Order Service</td>
+          <td class="ak">Kafka: order-events</td>
+          <td>Publish ORDER_PLACED event via Spring Cloud Stream Kafka binder</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-teal">11</span></td>
+          <td class="ao">Order Service</td>
+          <td class="ag">Gateway → Client</td>
+          <td>Return <code>201 Created</code> with traceId in response headers</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-teal">12</span></td>
+          <td>All services</td>
+          <td><span style="color:#4fd1c5">Zipkin :9411</span></td>
+          <td>Async span export — full trace visible in Zipkin UI with all hops</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Inter-Service Communication Matrix</div>
+    <table class="ftable">
+      <thead>
+        <tr><th>Caller</th><th>Callee</th><th>Method</th><th>Pattern</th><th>Resilience</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="ag">Gateway</td><td class="ak">Keycloak</td><td>JWKS fetch</td>
+          <td>REST (cached)</td><td><span class="badge bd-purple">Key Cache</span></td>
+        </tr>
+        <tr>
+          <td class="ag">Gateway</td><td class="ae">Eureka</td><td>Service lookup</td>
+          <td>REST</td><td><span class="badge bd-green">Load Balance</span></td>
+        </tr>
+        <tr>
+          <td class="ag">Gateway</td><td class="ao">Order Service</td><td>Route proxy</td>
+          <td>Reactive (WebFlux)</td><td><span class="badge bd-green">LB + Health</span></td>
+        </tr>
+        <tr>
+          <td class="ao">Order Service</td><td class="ag">User Service</td><td>GET /users/{id}</td>
+          <td>@LoadBalanced RestTemplate</td><td><span class="badge bd-orange">CB + Retry + Timeout</span></td>
+        </tr>
+        <tr>
+          <td class="ao">Order Service</td><td class="ap">Product Service</td><td>GET /products/{id}</td>
+          <td>@LoadBalanced RestTemplate</td><td><span class="badge bd-orange">CB + Retry + Timeout</span></td>
+        </tr>
+        <tr>
+          <td class="ao">Order Service</td><td class="ak">Kafka</td><td>Publish order-events</td>
+          <td>Spring Cloud Stream</td><td><span class="badge bd-purple">Kafka Replication</span></td>
+        </tr>
+        <tr>
+          <td class="ap">Product Service</td><td class="ak">Kafka</td><td>Consume order-events</td>
+          <td>Spring Cloud Stream</td><td><span class="badge bd-purple">Consumer Group</span></td>
+        </tr>
+        <tr>
+          <td class="ag">User Service</td><td class="amq">RabbitMQ</td><td>Publish user.events</td>
+          <td>Spring Cloud Stream</td><td><span class="badge bd-red">Durable Queue</span></td>
+        </tr>
+        <tr>
+          <td class="ag">User Service</td><td class="amq">RabbitMQ</td><td>Consume order.notifications</td>
+          <td>Spring Cloud Stream</td><td><span class="badge bd-red">Dead Letter Queue</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     TAB 6 — RESILIENCE4J
+══════════════════════════════════════════════════ -->
+<div id="panel-resilience" class="panel">
+  <div class="card">
+    <div class="section-title">Circuit Breaker State Machine (Order Service)</div>
+    <div class="state-row">
+      <div class="state-box state-closed">
+        <div class="sl">STATE</div>
+        <div class="sn" style="color:#c6f6d5">CLOSED</div>
+        <div class="sd">Normal operation<br>Requests pass through<br>Tracking failure rate</div>
+      </div>
+      <div class="state-arrow">→ failure rate ≥ 50% →</div>
+      <div class="state-box state-open">
+        <div class="sl">STATE</div>
+        <div class="sn" style="color:#fed7d7">OPEN</div>
+        <div class="sd">All calls rejected<br>Fallback invoked<br>Wait 5 seconds</div>
+      </div>
+      <div class="state-arrow">→ wait 5s →</div>
+      <div class="state-box state-half">
+        <div class="sl">STATE</div>
+        <div class="sn" style="color:#feebc8">HALF-OPEN</div>
+        <div class="sd">3 probe calls allowed<br>Success → CLOSED<br>Fail → OPEN</div>
+      </div>
+    </div>
+
+    <table class="ftable" style="margin-top:14px">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>slidingWindowSize</td><td><code>10</code></td><td>Track last 10 calls for failure rate calculation</td></tr>
+        <tr><td>failureRateThreshold</td><td><code>50%</code></td><td>Open circuit when ≥50% of calls fail</td></tr>
+        <tr><td>waitDurationInOpenState</td><td><code>5s</code></td><td>Stay OPEN for 5s before attempting HALF-OPEN</td></tr>
+        <tr><td>permittedCallsInHalfOpen</td><td><code>3</code></td><td>Allow 3 probe calls in HALF-OPEN state</td></tr>
+        <tr><td>Retry maxAttempts</td><td><code>3</code></td><td>Retry up to 3 times before counting as failure</td></tr>
+        <tr><td>Retry waitDuration</td><td><code>1s</code></td><td>Wait 1 second between retry attempts</td></tr>
+        <tr><td>TimeLimiter timeout</td><td><code>3s</code></td><td>Abort call if it takes longer than 3 seconds</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Annotated Fallback Flow</div>
+    <table class="ftable">
+      <thead><tr><th>#</th><th>Event</th><th>Component</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="sb sb-orange">1</span></td>
+          <td>Order Service calls User Service</td>
+          <td class="ao">OrderServiceClient</td>
+          <td>@CircuitBreaker(name="user-service", fallbackMethod="getUserFallback")</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-orange">2</span></td>
+          <td>Call times out after 3s or throws exception</td>
+          <td class="ao">TimeLimiter / CB</td>
+          <td>Retry #1 → wait 1s → Retry #2 → wait 1s → Retry #3</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-red">3</span></td>
+          <td>All 3 retries fail</td>
+          <td class="ao">CircuitBreaker</td>
+          <td>Failure recorded in sliding window; if rate ≥ 50% → OPEN</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-red">4</span></td>
+          <td>Circuit is OPEN</td>
+          <td class="ao">getUserFallback()</td>
+          <td>Throws <code>ServiceUnavailableException</code> → 503 to caller</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-teal">5</span></td>
+          <td>After 5s waitDuration</td>
+          <td class="ao">CircuitBreaker</td>
+          <td>Transitions to HALF-OPEN; 3 probe calls allowed</td>
+        </tr>
+        <tr>
+          <td><span class="sb sb-green">6</span></td>
+          <td>Probe calls succeed</td>
+          <td class="ao">CircuitBreaker</td>
+          <td>Transitions back to CLOSED; normal operation resumes</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     TAB 7 — PORT REFERENCE
+══════════════════════════════════════════════════ -->
+<div id="panel-ports" class="panel">
+  <div class="card">
+    <div class="section-title">Port &amp; Endpoint Reference</div>
+    <div class="pgrid">
+
+      <div class="pc" style="background:#0f2a1a;border-color:#48bb78">
+        <div class="pn" style="color:#c6f6d5">API Gateway</div>
+        <div class="pp" style="color:#68d391">:8080</div>
+        <ul>
+          <li>/api/v1/users/**</li>
+          <li>/api/v1/orders/**</li>
+          <li>/api/v1/products/**</li>
+          <li>/actuator/prometheus</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#2c1654;border-color:#9f7aea">
+        <div class="pn" style="color:#e9d8fd">Eureka Server</div>
+        <div class="pp" style="color:#b794f4">:8761</div>
+        <ul>
+          <li>/eureka/apps</li>
+          <li>/actuator/health</li>
+          <li>Dashboard UI: /</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#2a1040;border-color:#b794f4">
+        <div class="pn" style="color:#faf5ff">Keycloak</div>
+        <div class="pp" style="color:#d6bcfa">:8180</div>
+        <ul>
+          <li>/realms/microservice-realm</li>
+          <li>/protocol/openid-connect/token</li>
+          <li>/protocol/openid-connect/certs</li>
+          <li>/admin (console)</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#1a2f23;border-color:#48bb78">
+        <div class="pn" style="color:#c6f6d5">User Service</div>
+        <div class="pp" style="color:#68d391">:8081 /api/v1</div>
+        <ul>
+          <li>GET/POST /users</li>
+          <li>GET/PUT/DELETE /users/{id}</li>
+          <li>/actuator/prometheus</li>
+          <li>/actuator/health</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#2a1f0f;border-color:#ed8936">
+        <div class="pn" style="color:#feebc8">Order Service</div>
+        <div class="pp" style="color:#fbd38d">:8082 /api/v1</div>
+        <ul>
+          <li>GET/POST /orders</li>
+          <li>GET /orders/{id}</li>
+          <li>/actuator/circuitbreakers</li>
+          <li>/actuator/prometheus</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#0f2341;border-color:#4299e1">
+        <div class="pn" style="color:#bee3f8">Product Service</div>
+        <div class="pp" style="color:#63b3ed">:8083 /api/v1</div>
+        <ul>
+          <li>GET/POST /products</li>
+          <li>GET/PUT/DELETE /products/{id}</li>
+          <li>/actuator/prometheus</li>
+          <li>/actuator/health</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#2d1015;border-color:#f56565">
+        <div class="pn" style="color:#fed7d7">RabbitMQ</div>
+        <div class="pp" style="color:#fc8181">:5672 / :15672</div>
+        <ul>
+          <li>:5672 — AMQP protocol</li>
+          <li>:15672 — Management UI</li>
+          <li>guest / guest (default)</li>
+          <li>VHost: /microservice</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#110d1a;border-color:#b794f4">
+        <div class="pn" style="color:#faf5ff">Apache Kafka</div>
+        <div class="pp" style="color:#d6bcfa">:9092 / :9021</div>
+        <ul>
+          <li>:9092 — Broker (Plaintext)</li>
+          <li>:9021 — Control Center UI</li>
+          <li>Topics: order-events</li>
+          <li>Topics: product-inventory</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#1a1520;border-color:#805ad5">
+        <div class="pn" style="color:#d6bcfa">Zookeeper</div>
+        <div class="pp" style="color:#b794f4">:2181</div>
+        <ul>
+          <li>Kafka coordination</li>
+          <li>Leader election</li>
+          <li>Config store</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#2d1a0a;border-color:#dd6b20">
+        <div class="pn" style="color:#fbd38d">Prometheus</div>
+        <div class="pp" style="color:#f6ad55">:9090</div>
+        <ul>
+          <li>Scrape interval: 15s</li>
+          <li>All 4 Spring services</li>
+          <li>RabbitMQ exporter</li>
+          <li>Kafka exporter</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#1a0a2d;border-color:#9f7aea">
+        <div class="pn" style="color:#e9d8fd">Grafana</div>
+        <div class="pp" style="color:#b794f4">:3000</div>
+        <ul>
+          <li>Dashboard ID: 11378</li>
+          <li>admin / admin</li>
+          <li>JVM + Spring metrics</li>
+          <li>Kafka + RabbitMQ boards</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#0a1f2d;border-color:#38b2ac">
+        <div class="pn" style="color:#b2f5ea">Zipkin</div>
+        <div class="pp" style="color:#4fd1c5">:9411</div>
+        <ul>
+          <li>Trace sampling: 100%</li>
+          <li>B3 propagation headers</li>
+          <li>All 4 Spring services</li>
+          <li>/zipkin UI</li>
+        </ul>
+      </div>
+
+      <div class="pc" style="background:#1a2f23;border-color:#48bb78">
+        <div class="pn" style="color:#c6f6d5">PostgreSQL DBs</div>
+        <div class="pp" style="color:#68d391">:5432 / :5433 / :5434</div>
+        <ul>
+          <li>:5432 — user-db</li>
+          <li>:5433 — order-db</li>
+          <li>:5434 — product-db</li>
+          <li>:5435 — keycloak-db</li>
+        </ul>
+      </div>
+
+    </div><!-- /pgrid -->
+
+    <!-- tech stack summary -->
+    <div style="margin-top:20px;padding:14px;background:#161b2a;border-radius:10px">
+      <div style="font-size:.72rem;color:#90cdf4;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Full Technology Stack</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span class="badge bd-blue" style="font-size:.72rem;padding:4px 10px">Spring Boot 3.2</span>
+        <span class="badge bd-green" style="font-size:.72rem;padding:4px 10px">Spring Cloud 2023.0</span>
+        <span class="badge bd-green" style="font-size:.72rem;padding:4px 10px">Spring Cloud Gateway</span>
+        <span class="badge bd-green" style="font-size:.72rem;padding:4px 10px">Spring Cloud Netflix Eureka</span>
+        <span class="badge bd-teal" style="font-size:.72rem;padding:4px 10px">Spring Cloud Stream</span>
+        <span class="badge bd-purple" style="font-size:.72rem;padding:4px 10px">Keycloak 23+</span>
+        <span class="badge bd-purple" style="font-size:.72rem;padding:4px 10px">Apache Kafka 3.6</span>
+        <span class="badge bd-red" style="font-size:.72rem;padding:4px 10px">RabbitMQ 3.12</span>
+        <span class="badge bd-orange" style="font-size:.72rem;padding:4px 10px">Resilience4j</span>
+        <span class="badge bd-teal" style="font-size:.72rem;padding:4px 10px">Zipkin / Brave</span>
+        <span class="badge bd-orange" style="font-size:.72rem;padding:4px 10px">Prometheus</span>
+        <span class="badge bd-purple" style="font-size:.72rem;padding:4px 10px">Grafana</span>
+        <span class="badge bd-gray" style="font-size:.72rem;padding:4px 10px">PostgreSQL 16</span>
+        <span class="badge bd-blue" style="font-size:.72rem;padding:4px 10px">Java 17</span>
+        <span class="badge bd-gray" style="font-size:.72rem;padding:4px 10px">Maven 3.8</span>
+        <span class="badge bd-gray" style="font-size:.72rem;padding:4px 10px">Docker / Docker Compose</span>
+        <span class="badge bd-blue" style="font-size:.72rem;padding:4px 10px">Kubernetes 1.28+</span>
+        <span class="badge bd-green" style="font-size:.72rem;padding:4px 10px">Helm 3</span>
+        <span class="badge bd-gray" style="font-size:.72rem;padding:4px 10px">Nginx Ingress</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
 </body>
 </html>
