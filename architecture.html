@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Microservice Architecture</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',sans-serif; background:#0f1117; color:#e2e8f0; padding:32px; }
+  h1 { text-align:center; font-size:1.8rem; color:#63b3ed; margin-bottom:8px; letter-spacing:1px; }
+  .subtitle { text-align:center; color:#718096; margin-bottom:40px; font-size:0.85rem; letter-spacing:1px; }
+  .card { background:#1a1d27; border:1px solid #2d3748; border-radius:12px; padding:24px; margin-bottom:28px; }
+  .section-title { font-size:1rem; font-weight:600; color:#90cdf4; text-transform:uppercase; letter-spacing:2px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .section-title::before { content:''; display:inline-block; width:4px; height:18px; background:#63b3ed; border-radius:2px; }
+  code { background:#2d3748; border-radius:4px; padding:1px 6px; font-size:0.76rem; color:#fbb6ce; font-family:'Cascadia Code','Consolas',monospace; }
+
+  /* ── arrows ── */
+  .arr { display:flex; flex-direction:column; align-items:center; margin:3px 0; }
+  .arr .l { width:2px; height:28px; }
+  .arr .h { width:0; height:0; border-left:7px solid transparent; border-right:7px solid transparent; }
+  .arr.blue  .l { background:#63b3ed; } .arr.blue  .h { border-top:10px solid #63b3ed; }
+  .arr.green .l { background:#48bb78; } .arr.green .h { border-top:10px solid #48bb78; }
+  .arr.orange .l { background:#dd6b20; } .arr.orange .h { border-top:10px solid #dd6b20; }
+  .arr.red    .l { background:#f56565; } .arr.red    .h { border-top:10px solid #f56565; }
+  .arr.teal   .l { background:#38b2ac; } .arr.teal   .h { border-top:10px solid #38b2ac; }
+  .arr.purple .l { background:#9f7aea; } .arr.purple .h { border-top:10px solid #9f7aea; }
+  .albl { font-size:0.68rem; color:#a0aec0; text-align:center; margin:1px 0 3px; }
+
+  .bidir { display:flex; flex-direction:column; align-items:center; }
+  .bidir .bl { width:2px; height:26px; background:#9f7aea; }
+  .bidir .bt { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:9px solid #9f7aea; }
+  .bidir .bb { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:9px solid #9f7aea; }
+
+  /* ── service boxes ── */
+  .client-box { background:#2d3748; border:2px solid #63b3ed; border-radius:10px; padding:12px 40px; font-weight:700; font-size:1rem; color:#bee3f8; letter-spacing:1px; text-align:center; }
+
+  .box { border-radius:12px; padding:14px 24px; text-align:center; border:2px solid; }
+  .box .blbl { font-size:0.68rem; letter-spacing:2px; margin-bottom:3px; }
+  .box .bname { font-size:1rem; font-weight:700; margin:2px 0; }
+  .box .bport { font-size:0.78rem; opacity:0.8; }
+  .box .bsub  { font-size:0.68rem; margin-top:5px; opacity:0.75; line-height:1.5; }
+
+  .bx-gateway  { background:#0f2a1a; border-color:#48bb78; min-width:300px; }
+  .bx-gateway  .blbl,.bx-gateway .bport,.bx-gateway .bsub { color:#68d391; } .bx-gateway .bname { color:#c6f6d5; }
+  .bx-eureka   { background:#2c1654; border-color:#9f7aea; min-width:240px; }
+  .bx-eureka   .blbl,.bx-eureka .bport { color:#b794f4; } .bx-eureka .bname { color:#e9d8fd; }
+  .bx-user     { background:#1a2f23; border-color:#48bb78; min-width:150px; }
+  .bx-user     .blbl,.bx-user .bport,.bx-user .bsub { color:#68d391; } .bx-user .bname { color:#c6f6d5; }
+  .bx-order    { background:#2a1f0f; border-color:#ed8936; min-width:160px; }
+  .bx-order    .blbl,.bx-order .bport,.bx-order .bsub { color:#fbd38d; } .bx-order .bname { color:#feebc8; }
+  .bx-product  { background:#0f2341; border-color:#4299e1; min-width:150px; }
+  .bx-product  .blbl,.bx-product .bport,.bx-product .bsub { color:#63b3ed; } .bx-product .bname { color:#bee3f8; }
+  .bx-prom     { background:#2d1a0a; border-color:#dd6b20; min-width:210px; }
+  .bx-prom     .blbl,.bx-prom .bport,.bx-prom .bsub { color:#f6ad55; } .bx-prom .bname { color:#fbd38d; }
+  .bx-grafana  { background:#1a0a2d; border-color:#f56565; min-width:210px; }
+  .bx-grafana  .blbl,.bx-grafana .bport { color:#fc8181; } .bx-grafana .bname { color:#fed7d7; }
+  .bx-zipkin   { background:#0a1f2d; border-color:#38b2ac; min-width:210px; }
+  .bx-zipkin   .blbl,.bx-zipkin .bport,.bx-zipkin .bsub { color:#4fd1c5; } .bx-zipkin .bname { color:#b2f5ea; }
+
+  .db-box { border-radius:8px; padding:6px 12px; text-align:center; font-size:0.7rem; font-weight:600; border:1px dashed; min-width:130px; }
+  .db-user    { background:#1a2f23; border-color:#48bb78; color:#68d391; }
+  .db-order   { background:#2a1f0f; border-color:#ed8936; color:#fbd38d; }
+  .db-product { background:#0f2341; border-color:#4299e1; color:#63b3ed; }
+
+  .cb-badge { display:inline-block; font-size:0.62rem; padding:2px 7px; border-radius:10px; font-weight:700; margin-top:4px; background:#7b341e; color:#fbd38d; border:1px solid #ed8936; }
+  .zt-badge { display:inline-block; font-size:0.62rem; padding:2px 7px; border-radius:10px; font-weight:700; margin-top:2px; background:#0a2d2a; color:#4fd1c5; border:1px solid #38b2ac; }
+
+  .svc-row { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; align-items:flex-start; }
+  .svc-col { display:flex; flex-direction:column; align-items:center; }
+  .bidir-row { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; font-size:0.73rem; color:#718096; }
+  .legend-item { display:flex; align-items:center; gap:6px; }
+  .legend-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* ── CB state diagram ── */
+  .state-row { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+  .state-box { border-radius:10px; padding:14px 20px; text-align:center; min-width:160px; border:2px solid; }
+  .state-closed   { background:#0f2a1a; border-color:#48bb78; }
+  .state-closed   .sn { color:#c6f6d5; } .state-closed .sd { color:#68d391; }
+  .state-open     { background:#2d1515; border-color:#f56565; }
+  .state-open     .sn { color:#fed7d7; } .state-open .sd { color:#fc8181; }
+  .state-half     { background:#2a1f0f; border-color:#ed8936; }
+  .state-half     .sn { color:#feebc8; } .state-half .sd { color:#fbd38d; }
+  .state-box .sl  { font-size:0.65rem; letter-spacing:2px; opacity:0.7; margin-bottom:4px; }
+  .state-box .sn  { font-size:0.9rem; font-weight:700; margin-bottom:4px; }
+  .state-box .sd  { font-size:0.72rem; line-height:1.5; }
+  .state-arrow { display:flex; align-items:center; gap:6px; font-size:0.72rem; color:#a0aec0; }
+  .sa { color:#718096; font-size:1.1rem; }
+
+  /* ── flow table ── */
+  .ftable { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .ftable th { background:#2d3748; padding:9px 12px; text-align:left; color:#90cdf4; font-weight:600; font-size:0.72rem; letter-spacing:1px; }
+  .ftable td { padding:9px 12px; border-bottom:1px solid #2d3748; vertical-align:top; }
+  .ftable tr:last-child td { border-bottom:none; }
+  .ftable tr:hover td { background:#1e2535; }
+  .sb { display:inline-block; border-radius:50%; width:22px; height:22px; text-align:center; line-height:22px; font-weight:700; font-size:0.72rem; }
+  .sb-blue   { background:#2b6cb0; color:#bee3f8; }
+  .sb-orange { background:#7b341e; color:#fbd38d; }
+  .sb-teal   { background:#1a4040; color:#b2f5ea; }
+  .sb-red    { background:#742a2a; color:#fed7d7; }
+  .ac { color:#63b3ed; font-weight:600; } .ag { color:#68d391; font-weight:600; }
+  .ao { color:#fbd38d; font-weight:600; } .ae { color:#b794f4; font-weight:600; }
+  .au { color:#68d391; font-weight:600; } .ap { color:#4299e1; font-weight:600; }
+  .adb{ color:#a0aec0; font-weight:600; } .apr{ color:#f6ad55; font-weight:600; }
+  .agr{ color:#fc8181; font-weight:600; } .azt{ color:#4fd1c5; font-weight:600; }
+
+  /* ── file paths ── */
+  .fp-group { background:#2d3748; border-radius:10px; padding:14px; margin-bottom:14px; }
+  .fp-gtitle { font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; }
+  .fp-row { display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid #1a1d27; }
+  .fp-row:last-child { border-bottom:none; }
+  .fp-icon { width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; flex-shrink:0; }
+  .ic-java { background:#7b341e; color:#fbd38d; }
+  .ic-yml  { background:#1a4731; color:#68d391; }
+  .ic-xml  { background:#2a2f6e; color:#a3bffa; }
+  .ic-teal { background:#1a4040; color:#4fd1c5; }
+  .ic-red  { background:#742a2a; color:#fc8181; }
+  .fp-info { flex:1; }
+  .fp-name { font-size:0.8rem; font-weight:600; color:#e2e8f0; margin-bottom:2px; }
+  .fp-path { font-size:0.7rem; color:#f6ad55; font-family:'Consolas',monospace; margin-bottom:3px; line-height:1.5; }
+  .fp-desc { font-size:0.71rem; color:#a0aec0; line-height:1.5; }
+  .tag { font-size:0.63rem; padding:2px 6px; border-radius:4px; font-weight:700; white-space:nowrap; align-self:flex-start; margin-top:2px; }
+  .t-cb   { background:#7b341e; color:#fbd38d; }
+  .t-zip  { background:#1a4040; color:#4fd1c5; }
+  .t-dep  { background:#2a2f6e; color:#a3bffa; }
+  .t-cfg  { background:#1a4731; color:#c6f6d5; }
+  .t-gw   { background:#0f2a1a; border:1px solid #48bb78; color:#68d391; }
+  .t-prom { background:#5a2d0a; color:#f6ad55; }
+  .t-act  { background:#1a3a3a; color:#81e6d9; }
+
+  /* port grid */
+  .pgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:12px; }
+  .pc { border-radius:10px; padding:13px; border-left:4px solid; }
+  .pc .pn { font-weight:700; font-size:0.85rem; margin-bottom:3px; }
+  .pc .pp { font-size:0.72rem; margin-bottom:7px; opacity:0.7; }
+  .pc ul  { padding-left:13px; font-size:0.71rem; color:#a0aec0; line-height:1.8; }
+</style>
+</head>
+<body>
+
+<h1>Spring Microservice Architecture</h1>
+<p class="subtitle">Gateway · Eureka · LoadBalancer · Resilience4j · Zipkin · Prometheus · Grafana</p>
+
+<!-- ══════════════════════════════════════
+     SECTION 1 — Full Architecture
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">Full Architecture Overview</div>
+  <div style="display:flex;flex-direction:column;align-items:center;">
+
+    <div class="client-box">CLIENT / Browser</div>
+    <div class="arr green"><div class="l"></div><div class="h"></div></div>
+    <div class="albl" style="color:#68d391;">Single entry :8080</div>
+
+    <div class="box bx-gateway">
+      <div class="blbl">API GATEWAY</div>
+      <div class="bname">Gateway Service</div>
+      <div class="bport">:8080</div>
+      <div class="bsub">/users/** → lb://user-service<br>/orders/** → lb://order-service<br>/products/** → lb://product-service</div>
+      <div class="zt-badge">Zipkin Tracing</div>
+    </div>
+    <div class="arr green"><div class="l"></div><div class="h"></div></div>
+    <div class="albl" style="color:#68d391;">lb:// via Eureka</div>
+
+    <!-- 3 services -->
+    <div class="svc-row">
+      <div class="svc-col">
+        <div class="box bx-user">
+          <div class="blbl">SERVICE</div>
+          <div class="bname">User Service</div>
+          <div class="bport">:8081</div>
+          <div class="zt-badge">Zipkin Tracing</div>
+        </div>
+        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+        <div class="db-box db-user">H2 · user_service</div>
+      </div>
+      <div class="svc-col">
+        <div class="box bx-order">
+          <div class="blbl">SERVICE + LOAD BALANCER</div>
+          <div class="bname">Order Service</div>
+          <div class="bport">:8082</div>
+          <div class="cb-badge">Circuit Breaker + Retry</div>
+          <div class="zt-badge">Zipkin Tracing</div>
+        </div>
+        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+        <div class="db-box db-order">H2 · order_service</div>
+      </div>
+      <div class="svc-col">
+        <div class="box bx-product">
+          <div class="blbl">SERVICE</div>
+          <div class="bname">Product Service</div>
+          <div class="bport">:8083</div>
+          <div class="zt-badge">Zipkin Tracing</div>
+        </div>
+        <div class="arr blue"><div class="l"></div><div class="h"></div></div>
+        <div class="db-box db-product">H2 · product_service</div>
+      </div>
+    </div>
+
+    <!-- Eureka -->
+    <div class="bidir-row">
+      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
+      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
+      <div class="bidir"><div class="bt"></div><div class="bl"></div><div class="bb"></div></div>
+    </div>
+    <div class="albl" style="color:#b794f4; margin-top:2px;">register / heartbeat / discover</div>
+    <div class="box bx-eureka" style="margin-top:4px;">
+      <div class="blbl">SERVICE REGISTRY</div>
+      <div class="bname">Eureka Server</div>
+      <div class="bport">:8761</div>
+    </div>
+
+    <!-- Monitoring row -->
+    <div style="margin-top:28px;width:100%;display:flex;flex-direction:column;align-items:center;">
+      <div style="font-size:0.7rem;color:#dd6b20;letter-spacing:1px;margin-bottom:8px;">PROMETHEUS SCRAPES /actuator/prometheus EVERY 15s</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
+        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8080 gateway</span>
+        <span style="color:#dd6b20;">←</span>
+        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8081 user</span>
+        <span style="color:#dd6b20;">←</span>
+        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8082 order</span>
+        <span style="color:#dd6b20;">←</span>
+        <span style="background:#2a1f0f;border:1px solid #dd6b20;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#f6ad55;">:8083 product</span>
+      </div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start;">
+        <!-- Prometheus → Grafana -->
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="box bx-prom">
+            <div class="blbl">METRICS STORE</div>
+            <div class="bname">Prometheus</div>
+            <div class="bport">:9090</div>
+          </div>
+          <div class="arr orange"><div class="l"></div><div class="h"></div></div>
+          <div class="albl" style="color:#dd6b20;">PromQL queries</div>
+          <div class="box bx-grafana">
+            <div class="blbl">VISUALIZATION</div>
+            <div class="bname">Grafana</div>
+            <div class="bport">:3000 — Dashboard ID: 11378</div>
+          </div>
+        </div>
+        <!-- Zipkin -->
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:0;">
+          <div style="font-size:0.7rem;color:#38b2ac;letter-spacing:1px;margin-bottom:8px;">ALL SERVICES PUSH TRACES</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;">
+            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">gateway</span>
+            <span style="color:#38b2ac;">→</span>
+            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">user</span>
+            <span style="color:#38b2ac;">→</span>
+            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">order</span>
+            <span style="color:#38b2ac;">→</span>
+            <span style="background:#0a1f2d;border:1px solid #38b2ac;border-radius:6px;padding:3px 9px;font-size:0.7rem;color:#4fd1c5;">product</span>
+          </div>
+          <div class="box bx-zipkin">
+            <div class="blbl">DISTRIBUTED TRACING</div>
+            <div class="bname">Zipkin</div>
+            <div class="bport">:9411 — http://localhost:9411</div>
+            <div class="bsub">Traces full request path across services</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#48bb78"></div>Gateway :8080</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9f7aea"></div>Eureka :8761</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c6f6d5;border:1px solid #48bb78"></div>User :8081</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#feebc8;border:1px solid #ed8936"></div>Order :8082 (CB+Retry)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#bee3f8;border:1px solid #4299e1"></div>Product :8083</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#dd6b20"></div>Prometheus :9090</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f56565"></div>Grafana :3000</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#38b2ac"></div>Zipkin :9411</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 2 — Circuit Breaker States
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">Circuit Breaker — State Machine (Resilience4j)</div>
+  <div class="state-row">
+    <div class="state-box state-closed">
+      <div class="sl">STATE</div>
+      <div class="sn">CLOSED</div>
+      <div class="sd">Normal operation.<br>Calls go through.<br>Failure rate monitored.</div>
+    </div>
+    <div class="state-arrow"><span class="sa">→</span><div>failure rate<br>&gt; 50% (10 calls)</div><span class="sa">→</span></div>
+    <div class="state-box state-open">
+      <div class="sl">STATE</div>
+      <div class="sn">OPEN</div>
+      <div class="sd">All calls BLOCKED.<br>Fallback method runs.<br>Waits 5 seconds.</div>
+    </div>
+    <div class="state-arrow"><span class="sa">→</span><div>after 5s<br>wait</div><span class="sa">→</span></div>
+    <div class="state-box state-half">
+      <div class="sl">STATE</div>
+      <div class="sn">HALF-OPEN</div>
+      <div class="sd">3 test calls allowed.<br>Success → CLOSED.<br>Failure → OPEN again.</div>
+    </div>
+  </div>
+
+  <table class="ftable">
+    <thead>
+      <tr><th>SETTING</th><th>VALUE</th><th>MEANING</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>slidingWindowSize</code></td><td>10</td><td>Monitor last 10 calls to decide state</td></tr>
+      <tr><td><code>failureRateThreshold</code></td><td>50%</td><td>Open circuit if ≥ 5 of 10 calls fail</td></tr>
+      <tr><td><code>waitDurationInOpenState</code></td><td>5s</td><td>Stay OPEN for 5 seconds before trying again</td></tr>
+      <tr><td><code>permittedNumberOfCallsInHalfOpenState</code></td><td>3</td><td>Allow 3 test calls in HALF-OPEN state</td></tr>
+      <tr><td><code>retry.maxAttempts</code></td><td>3</td><td>Retry failed calls up to 3 times before giving up</td></tr>
+      <tr><td><code>retry.waitDuration</code></td><td>1s</td><td>Wait 1 second between each retry attempt</td></tr>
+      <tr><td><code>timelimiter.timeoutDuration</code></td><td>3s</td><td>Timeout if service doesn't respond within 3 seconds</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 3 — Zipkin Trace Flow
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">Zipkin — How a Trace Flows</div>
+  <table class="ftable">
+    <thead>
+      <tr><th>#</th><th>SERVICE</th><th>SPAN</th><th>TRACE ID</th><th>WHAT ZIPKIN RECORDS</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sb sb-teal">1</span></td>
+        <td><span class="ag">Gateway :8080</span></td>
+        <td>Root span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Receives request, creates new traceId, forwards to order-service</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">2</span></td>
+        <td><span class="ao">Order Service :8082</span></td>
+        <td>Child span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Receives forwarded request, same traceId propagated via HTTP headers</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">3</span></td>
+        <td><span class="ao">Order Service :8082</span></td>
+        <td>Child span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Calls user-service via @LoadBalanced RestTemplate — span recorded</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">4</span></td>
+        <td><span class="au">User Service :8081</span></td>
+        <td>Child span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Receives call, same traceId — full hop recorded in Zipkin</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">5</span></td>
+        <td><span class="ao">Order Service :8082</span></td>
+        <td>Child span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Calls product-service via @LoadBalanced RestTemplate — span recorded</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">6</span></td>
+        <td><span class="ap">Product Service :8083</span></td>
+        <td>Child span</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Receives call, same traceId — full hop recorded in Zipkin</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">7</span></td>
+        <td><span class="azt">Zipkin UI :9411</span></td>
+        <td>Complete trace</td>
+        <td><code>traceId=abc123</code></td>
+        <td>Shows full timeline: Gateway → Order → User + Product with latency per hop</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 4 — POST /orders full trace
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">POST /api/v1/orders — Full Request Trace with Circuit Breaker</div>
+  <table class="ftable">
+    <thead>
+      <tr><th>#</th><th>FROM</th><th>TO</th><th>CALL</th><th>LAYER</th><th>WHAT HAPPENS</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sb sb-blue">1</span></td>
+        <td><span class="ac">Client</span></td>
+        <td><span class="ag">Gateway :8080</span></td>
+        <td><code>POST /api/v1/orders</code></td>
+        <td>Gateway</td>
+        <td>Single entry point. Zipkin creates traceId.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">2</span></td>
+        <td><span class="ag">Gateway</span></td>
+        <td><span class="ae">Eureka :8761</span></td>
+        <td>Lookup order-service</td>
+        <td>Load Balance</td>
+        <td><code>lb://order-service</code> → resolved to :8082</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">3</span></td>
+        <td><span class="ag">Gateway</span></td>
+        <td><span class="ao">Order :8082</span></td>
+        <td>Proxied POST</td>
+        <td>Routing</td>
+        <td>TraceId propagated in HTTP headers.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-red">4</span></td>
+        <td><span class="ao">Order Service</span></td>
+        <td>Circuit Breaker</td>
+        <td>Check CB state for user-service</td>
+        <td>Circuit Breaker</td>
+        <td>If OPEN → fallback thrown immediately, skip step 5.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">5</span></td>
+        <td><span class="ao">Order Service</span></td>
+        <td><span class="au">User :8081</span></td>
+        <td><code>GET /api/v1/users/{id}</code></td>
+        <td>Retry (max 3×)</td>
+        <td>@Retry retries up to 3 times on failure. CB records success/fail.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-red">6</span></td>
+        <td><span class="ao">Order Service</span></td>
+        <td>Circuit Breaker</td>
+        <td>Check CB state for product-service</td>
+        <td>Circuit Breaker</td>
+        <td>If OPEN → fallback thrown immediately, skip step 7.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">7</span></td>
+        <td><span class="ao">Order Service</span></td>
+        <td><span class="ap">Product :8083</span></td>
+        <td><code>GET /api/v1/products/{id}</code></td>
+        <td>Retry (max 3×)</td>
+        <td>@Retry retries up to 3 times on failure. CB records success/fail.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">8</span></td>
+        <td><span class="ao">Order Service</span></td>
+        <td><span class="adb">H2 DB</span></td>
+        <td><code>INSERT INTO orders</code></td>
+        <td>Persistence</td>
+        <td>Saved only if both validations passed.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-teal">9</span></td>
+        <td>All services</td>
+        <td><span class="azt">Zipkin :9411</span></td>
+        <td>Push spans</td>
+        <td>Tracing</td>
+        <td>Each service sends its span. Full trace visible at :9411.</td>
+      </tr>
+      <tr>
+        <td><span class="sb sb-blue">10</span></td>
+        <td><span class="ag">Gateway</span></td>
+        <td><span class="ac">Client</span></td>
+        <td><code>200 OK</code> or <code>503 fallback</code></td>
+        <td>Response</td>
+        <td>Order JSON returned, or circuit-open error message.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 5 — File Paths
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">Exact File Paths — All Components</div>
+
+  <!-- Zipkin -->
+  <div class="fp-group">
+    <div class="fp-gtitle" style="color:#4fd1c5;">Zipkin — Distributed Tracing</div>
+    <div class="fp-row">
+      <div class="fp-icon ic-xml">POM</div>
+      <div class="fp-info">
+        <div class="fp-name">micrometer-tracing-bridge-brave + zipkin-reporter-brave (all 4 services)</div>
+        <div class="fp-path">user-service / order-service / product-service / gateway-service — pom.xml</div>
+        <div class="fp-desc">Adds Brave tracer bridge. Every HTTP call automatically gets a traceId + spanId injected into headers and sent to Zipkin.</div>
+      </div>
+      <span class="tag t-dep">DEPENDENCY</span>
+    </div>
+    <div class="fp-row">
+      <div class="fp-icon ic-yml">YML</div>
+      <div class="fp-info">
+        <div class="fp-name">Zipkin endpoint config (all 4 application.yml)</div>
+        <div class="fp-path">user-service / order-service / product-service / gateway-service — application.yml</div>
+        <div class="fp-desc">
+          <code>management.zipkin.tracing.endpoint: http://localhost:9411/api/v2/spans</code><br>
+          <code>management.tracing.sampling.probability: 1.0</code> — trace 100% of requests
+        </div>
+      </div>
+      <span class="tag t-zip">ZIPKIN</span>
+    </div>
+  </div>
+
+  <!-- Circuit Breaker -->
+  <div class="fp-group">
+    <div class="fp-gtitle" style="color:#fbd38d;">Circuit Breaker + Retry + Fault Tolerance (Order Service only)</div>
+    <div class="fp-row">
+      <div class="fp-icon ic-xml">POM</div>
+      <div class="fp-info">
+        <div class="fp-name">spring-cloud-starter-circuitbreaker-resilience4j + spring-boot-starter-aop</div>
+        <div class="fp-path">order-service/pom.xml</div>
+        <div class="fp-desc">Resilience4j library. AOP is required for <code>@CircuitBreaker</code> and <code>@Retry</code> annotations to work.</div>
+      </div>
+      <span class="tag t-dep">DEPENDENCY</span>
+    </div>
+    <div class="fp-row">
+      <div class="fp-icon ic-java">CLT</div>
+      <div class="fp-info">
+        <div class="fp-name">OrderServiceClient.java</div>
+        <div class="fp-path">order-service/src/main/java/com/microservice/order/client/OrderServiceClient.java</div>
+        <div class="fp-desc">
+          Contains the circuit-breaker logic as a separate Spring bean (required for AOP to intercept calls):<br>
+          <code>@CircuitBreaker(name="user-service", fallbackMethod="userServiceFallback")</code><br>
+          <code>@Retry(name="user-service")</code> on <code>getUser()</code><br>
+          Same pattern for <code>getProduct()</code> → <code>product-service</code><br>
+          Fallback methods throw a clear error when the circuit is open.
+        </div>
+      </div>
+      <span class="tag t-cb">CIRCUIT BREAKER</span>
+    </div>
+    <div class="fp-row">
+      <div class="fp-icon ic-java">SVC</div>
+      <div class="fp-info">
+        <div class="fp-name">OrderService.java</div>
+        <div class="fp-path">order-service/src/main/java/com/microservice/order/service/OrderService.java</div>
+        <div class="fp-desc">Injects <code>OrderServiceClient</code> and calls <code>serviceClient.getUser()</code> and <code>serviceClient.getProduct()</code> — circuit breaker and retry are transparent.</div>
+      </div>
+      <span class="tag t-cb">USES CB</span>
+    </div>
+    <div class="fp-row">
+      <div class="fp-icon ic-yml">YML</div>
+      <div class="fp-info">
+        <div class="fp-name">Resilience4j config</div>
+        <div class="fp-path">order-service/src/main/resources/application.yml</div>
+        <div class="fp-desc">
+          Circuit breaker: <code>slidingWindowSize:10</code>, <code>failureRateThreshold:50</code>, <code>waitDurationInOpenState:5s</code><br>
+          Retry: <code>maxAttempts:3</code>, <code>waitDuration:1s</code><br>
+          TimeLimiter: <code>timeoutDuration:3s</code>
+        </div>
+      </div>
+      <span class="tag t-cfg">CONFIG</span>
+    </div>
+  </div>
+
+  <!-- Prometheus + Grafana -->
+  <div class="fp-group">
+    <div class="fp-gtitle" style="color:#f6ad55;">Prometheus + Grafana</div>
+    <div class="fp-row">
+      <div class="fp-icon ic-xml">POM</div>
+      <div class="fp-info">
+        <div class="fp-name">spring-boot-starter-actuator + micrometer-registry-prometheus (all 4)</div>
+        <div class="fp-path">user-service / order-service / product-service / gateway-service — pom.xml</div>
+        <div class="fp-desc">Exposes <code>/actuator/prometheus</code> endpoint with metrics in Prometheus text format.</div>
+      </div>
+      <span class="tag t-prom">PROMETHEUS</span>
+    </div>
+    <div class="fp-row">
+      <div class="fp-icon ic-yml">YML</div>
+      <div class="fp-info">
+        <div class="fp-name">prometheus.yml — scrape config</div>
+        <div class="fp-path">monitoring/prometheus.yml</div>
+        <div class="fp-desc">Scrapes all 4 services every 15s. Run: <code>.\prometheus.exe --config.file=prometheus.yml</code></div>
+      </div>
+      <span class="tag t-prom">CONFIG</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 6 — Port Summary
+══════════════════════════════════════ -->
+<div class="card">
+  <div class="section-title">Port &amp; Service Summary</div>
+  <div class="pgrid">
+    <div class="pc" style="background:#0f2a1a;border-color:#48bb78;">
+      <div class="pn" style="color:#c6f6d5;">Gateway Service</div>
+      <div class="pp" style="color:#68d391;">:8080</div>
+      <ul><li>Single entry point</li><li>Path-based routing</li><li>lb:// load balancing</li><li>Zipkin tracing</li></ul>
+    </div>
+    <div class="pc" style="background:#2c1654;border-color:#9f7aea;">
+      <div class="pn" style="color:#e9d8fd;">Eureka Server</div>
+      <div class="pp" style="color:#9f7aea;">:8761</div>
+      <ul><li>Service registry</li><li>Dashboard at :8761</li><li>Heartbeat every 30s</li></ul>
+    </div>
+    <div class="pc" style="background:#1a2f23;border-color:#48bb78;">
+      <div class="pn" style="color:#c6f6d5;">User Service</div>
+      <div class="pp" style="color:#68d391;">:8081</div>
+      <ul><li>CRUD users</li><li>H2 DB</li><li>Eureka client</li><li>Zipkin tracing</li></ul>
+    </div>
+    <div class="pc" style="background:#2a1f0f;border-color:#ed8936;">
+      <div class="pn" style="color:#feebc8;">Order Service</div>
+      <div class="pp" style="color:#fbd38d;">:8082</div>
+      <ul><li>CRUD orders</li><li>@LoadBalanced RestTemplate</li><li>Circuit Breaker + Retry</li><li>Timeout 3s</li><li>Fallback on failure</li><li>Zipkin tracing</li></ul>
+    </div>
+    <div class="pc" style="background:#0f2341;border-color:#4299e1;">
+      <div class="pn" style="color:#bee3f8;">Product Service</div>
+      <div class="pp" style="color:#63b3ed;">:8083</div>
+      <ul><li>CRUD products</li><li>H2 DB</li><li>Eureka client</li><li>Zipkin tracing</li></ul>
+    </div>
+    <div class="pc" style="background:#2d1a0a;border-color:#dd6b20;">
+      <div class="pn" style="color:#fbd38d;">Prometheus</div>
+      <div class="pp" style="color:#dd6b20;">:9090 (external)</div>
+      <ul><li>Scrapes 4 services</li><li>monitoring/prometheus.yml</li><li>Windows binary</li></ul>
+    </div>
+    <div class="pc" style="background:#1a0a2d;border-color:#f56565;">
+      <div class="pn" style="color:#fed7d7;">Grafana</div>
+      <div class="pp" style="color:#f56565;">:3000 (external)</div>
+      <ul><li>Dashboard ID: 11378</li><li>admin / admin</li><li>Windows installer</li></ul>
+    </div>
+    <div class="pc" style="background:#0a1f2d;border-color:#38b2ac;">
+      <div class="pn" style="color:#b2f5ea;">Zipkin</div>
+      <div class="pp" style="color:#38b2ac;">:9411 (external)</div>
+      <ul><li>Distributed tracing UI</li><li>Run: <code>java -jar zipkin.jar</code></li><li>Download: zipkin.io/quickstart</li></ul>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;background:#0a1f2d;border:1px solid #38b2ac;border-radius:8px;padding:14px;">
+    <div style="font-size:0.78rem;font-weight:700;color:#4fd1c5;margin-bottom:8px;">Start Zipkin on Windows (no Docker needed):</div>
+    <div style="font-size:0.74rem;color:#a0aec0;line-height:2;font-family:Consolas,monospace;">
+      1. Download: <span style="color:#b2f5ea;">curl -sSL https://zipkin.io/quickstart.sh | bash -s</span> &nbsp;(or download zipkin.jar manually)<br>
+      2. Start: <span style="color:#b2f5ea;">java -jar zipkin.jar</span><br>
+      3. Open UI: <span style="color:#b2f5ea;">http://localhost:9411</span><br>
+      4. Make any request through Gateway → traces appear automatically
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

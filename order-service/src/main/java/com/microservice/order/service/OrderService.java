@@ -1,8 +1,10 @@
 package com.microservice.order.service;
 
+import com.microservice.order.client.OrderServiceClient;
 import com.microservice.order.model.Order;
 import com.microservice.order.repository.OrderRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -10,12 +12,17 @@ import java.util.Optional;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderServiceClient serviceClient;
 
-    public OrderService(OrderRepository orderRepository) {
+    public OrderService(OrderRepository orderRepository, OrderServiceClient serviceClient) {
         this.orderRepository = orderRepository;
+        this.serviceClient = serviceClient;
     }
 
     public Order createOrder(Order order) {
+        // Circuit Breaker + Retry protect these calls
+        serviceClient.getUser(order.getUserId());
+        serviceClient.getProduct(order.getProductId());
         return orderRepository.save(order);
     }
 
